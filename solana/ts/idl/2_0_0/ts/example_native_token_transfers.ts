@@ -1160,6 +1160,57 @@ export type ExampleNativeTokenTransfers = {
           }
         }
       ]
+    },
+    {
+      "name": "transferMintAuthority",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "accounts": [
+            {
+              "name": "config",
+              "isMut": false,
+              "isSigner": false
+            }
+          ]
+        },
+        {
+          "name": "tokenAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK The seeds constraint ensures that this is the correct address"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "custody",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "TransferMintAuthorityArgs"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1661,6 +1712,18 @@ export type ExampleNativeTokenTransfers = {
       }
     },
     {
+      "name": "TransferMintAuthorityArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "newMintAuthority",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
       "name": "ReleaseStatus",
       "docs": [
         "The status of an InboxItem. This determines whether the tokens are minted/unlocked to the recipient. As",
@@ -1956,8 +2019,7 @@ export type ExampleNativeTokenTransfers = {
       "msg": "NoRegisteredTransceivers"
     }
   ]
-};
-
+}
 export const IDL: ExampleNativeTokenTransfers = {
   "version": "2.0.0",
   "name": "example_native_token_transfers",
@@ -3120,6 +3182,57 @@ export const IDL: ExampleNativeTokenTransfers = {
           }
         }
       ]
+    },
+    {
+      "name": "transferMintAuthority",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "accounts": [
+            {
+              "name": "config",
+              "isMut": false,
+              "isSigner": false
+            }
+          ]
+        },
+        {
+          "name": "tokenAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK The seeds constraint ensures that this is the correct address"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "custody",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "TransferMintAuthorityArgs"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -3621,6 +3734,18 @@ export const IDL: ExampleNativeTokenTransfers = {
       }
     },
     {
+      "name": "TransferMintAuthorityArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "newMintAuthority",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
       "name": "ReleaseStatus",
       "docs": [
         "The status of an InboxItem. This determines whether the tokens are minted/unlocked to the recipient. As",
@@ -3916,4 +4041,5 @@ export const IDL: ExampleNativeTokenTransfers = {
       "msg": "NoRegisteredTransceivers"
     }
   ]
-};
+}
+

@@ -9,7 +9,7 @@ crate-type = ["cdylib", "lib"]
 name = "ntt"
 
 [features]
-default = ["mainnet", "token-sky"]
+default = ["mainnet", "token-usds"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []

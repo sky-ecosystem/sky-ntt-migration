@@ -274,6 +274,35 @@ export namespace NTT {
       .instruction();
   }
 
+  export async function createTransferMintAuthorityInstruction(
+    program: Program<NttBindings.NativeTokenTransfer<IdlVersion>>,
+    args: {
+      payer: PublicKey;
+      mint: PublicKey;
+      newMintAuthority: PublicKey;
+      tokenProgram: PublicKey;
+    },
+    pdas?: Pdas
+  ) {
+    pdas = pdas ?? NTT.pdas(program.programId);
+
+    return await program.methods
+      .transferMintAuthority({ newMintAuthority: args.newMintAuthority })
+      .accountsStrict({
+        payer: args.payer,
+        config: { config: pdas.configAccount() },
+        mint: args.mint,
+        tokenProgram: args.tokenProgram,
+        tokenAuthority: pdas.tokenAuthority(),
+        custody: await NTT.custodyAccountAddress(
+          pdas,
+          args.mint,
+          args.tokenProgram
+        ),
+      })
+      .instruction();
+  }
+
   // This function should be called after each upgrade. If there's nothing to
   // do, it won't actually submit a transaction, so it's cheap to call.
   export async function initializeOrUpdateLUT(

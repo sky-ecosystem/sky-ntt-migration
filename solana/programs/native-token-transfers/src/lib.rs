@@ -30,7 +30,7 @@ use instructions::*;
 declare_id!("STTZMMZhaytNtyHshzZ8HAgJoTVWhwrKFG7qk7xtSst");
 
 #[cfg(feature = "token-usds")]
-declare_id!("STTUVCMPuNbk21y1J6nqEGXSQ8HKvFmFBKnCvKHTrWn");
+declare_id!("LT7z3KBNJZRvJTprYGMWERSBFpwTdNqPzUnFPzYSgt3");
 
 pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
 
@@ -176,6 +176,13 @@ pub mod example_native_token_transfers {
         args: BroadcastPeerArgs,
     ) -> Result<()> {
         transceivers::wormhole::instructions::broadcast_peer(ctx, args)
+    }
+
+    pub fn transfer_mint_authority<'info>(
+        ctx: Context<'_, '_, '_, 'info, TransferMintAuthority<'info>>,
+        args: TransferMintAuthorityArgs,
+    ) -> Result<()> {
+        instructions::transfer_mint_authority(ctx, args)
     }
 }
 
