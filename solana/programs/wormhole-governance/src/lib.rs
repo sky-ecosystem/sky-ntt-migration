@@ -5,7 +5,7 @@ pub mod instructions;
 
 use instructions::*;
 
-declare_id!("EdJ2BTKPXTt1Fpz7WnT8TMsMeGeJYbZ3UJeM617sJJUz");
+declare_id!("SCCGgsntaUPmP6UjwUBNiQQ83ys5fnCHdFASHPV6Fm9");
 
 pub const GOV_AUTHORITY: [u8; 32] = [
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0x8E, 0x3e, 0x36,

@@ -7,16 +7,16 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-dummy_transfer_hook = "2Y1oMkjGBzX8WFzePFfw9cNMM95cUh22Lco3AKVDywh4"
+dummy_transfer_hook = "BgabMDLaxsyB7eGMBt9L22MSk9KMrL4zY2iNe14kyFP5"
 example_native_token_transfers = "nttiK1SepaQt6sZ4WGW5whvc9tEnGXGxuKeptcQPCcS"
-ntt_quoter = "8UGfSE2wjoVPnU2kZns7EnaV2Gio5La9c2ZmzHadVwmu"
-wormhole_governance = "EdJ2BTKPXTt1Fpz7WnT8TMsMeGeJYbZ3UJeM617sJJUz"
+ntt_quoter = "9jFBLvMZZERVmeY4tbq5MejbXRE18paGEuoB6xVJZgGe"
+wormhole_governance = "wgvEiKVzX9yyEoh41jZAdC6JqGUTS4CFXbFGBV5TKdZ"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "localnet"
 wallet = "keys/test.json"
 
 [scripts]
