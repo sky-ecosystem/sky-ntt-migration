@@ -12,7 +12,7 @@ import {PausableUpgradeable} from "../src/libraries/PausableUpgradeable.sol";
 
 import {ParseNttConfig} from "./helpers/ParseNttConfig.sol";
 
-contract UpgradeNttManagerScript is ParseNttConfig {
+contract SimulateNttManagerUpgradeScript is ParseNttConfig {
     struct DeploymentParams {
         address token;
         INttManager.Mode mode;
@@ -56,12 +56,34 @@ contract UpgradeNttManagerScript is ParseNttConfig {
         vm.expectRevert();
         nttManager.isSendPaused();
 
-        vm.startBroadcast();
+        vm.startPrank(nttManager.owner());
         upgradeNttManager(nttManager, params);
-        vm.stopBroadcast();
+        vm.stopPrank();
 
         console2.log("after upgrade");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
         console2.log("Is NttManager send paused: ", nttManager.isSendPaused());
+
+        // simulate a transfer from account that has balance
+        vm.deal(address(nttManager), 1 ether);
+        vm.startPrank(address(nttManager));
+        (, uint256 totalPriceQuote) = nttManager.quoteDeliveryPrice(1, new bytes(1));
+        nttManager.transfer{value: totalPriceQuote}(1 ether, 1, 0x000000000000000000000000000000000000000000000000000000000000dead);
+        vm.stopPrank();
+
+        vm.startPrank(nttManager.owner());
+        nttManager.pauseSend();
+        vm.stopPrank();
+
+        console2.log("after pauseSend");
+        console2.log("Is NttManager paused: ", nttManager.isPaused());
+        console2.log("Is NttManager send paused: ", nttManager.isSendPaused());
+
+        // try transfer again but this time it should revert because the send is paused
+        vm.startPrank(address(nttManager));
+        (, totalPriceQuote) = nttManager.quoteDeliveryPrice(1, new bytes(1));
+        vm.expectRevert(PausableUpgradeable.RequireContractSendIsNotPaused.selector);
+        nttManager.transfer{value: totalPriceQuote}(1 ether, 1, 0x000000000000000000000000000000000000000000000000000000000000dead);
+        vm.stopPrank();
     }
 }

@@ -24,6 +24,7 @@ abstract contract PausableUpgradeable is Initializable {
     // @dev Storage slot with the pause flag, this is managed by the `PauseStorage` struct
     struct PauseStorage {
         uint256 _pauseFlag;
+        uint256 _sendPausedFlag;
     }
 
     /// NOTE: use uint256 to save on gas because it is the native word size of the EVM
@@ -42,6 +43,16 @@ abstract contract PausableUpgradeable is Initializable {
      */
     error RequireContractIsPaused();
 
+    /** 
+     * @dev Contract send is paused, blocking
+     */
+    error RequireContractSendIsPaused();
+
+    /**
+     * @dev Contract send is not paused, functionality is unblocked
+     */
+    error RequireContractSendIsNotPaused();
+
     /**
      * @dev the pauser is not a valid pauser account (e.g. `address(0)`)
      */
@@ -50,7 +61,9 @@ abstract contract PausableUpgradeable is Initializable {
     // @dev Emitted when the contract is paused
     event Paused(bool paused);
     event NotPaused(bool notPaused);
-
+    event SendPaused(bool sendPaused);
+    event SendNotPaused(bool sendNotPaused);
+    
     bytes32 private constant PAUSE_SLOT = bytes32(uint256(keccak256("Pause.pauseFlag")) - 1);
     bytes32 private constant PAUSER_ROLE_SLOT = bytes32(uint256(keccak256("Pause.pauseRole")) - 1);
 
@@ -81,6 +94,12 @@ abstract contract PausableUpgradeable is Initializable {
         _getPauseStorage()._pauseFlag = pauseFlag;
     }
 
+    function _setSendPauseStorage(
+        uint256 sendPauseFlag
+    ) internal {
+        _getPauseStorage()._sendPausedFlag = sendPauseFlag;
+    }
+
     function __Paused_init(
         address initialPauser
     ) internal onlyInitializing {
@@ -97,6 +116,12 @@ abstract contract PausableUpgradeable is Initializable {
         // set the initial pauser
         PauserStorage storage $_role = _getPauserStorage();
         $_role._pauser = initialPauser;
+    }
+
+    function __Paused_init2_unchained() internal onlyInitializing {
+        // set send pause flag to false initially
+        PauseStorage storage $ = _getPauseStorage();
+        $._sendPausedFlag = NOT_PAUSED;
     }
 
     /**
@@ -117,6 +142,20 @@ abstract contract PausableUpgradeable is Initializable {
     modifier whenPaused() {
         if (!isPaused()) {
             revert RequireContractIsPaused();
+        }
+        _;
+    }
+
+    modifier whenSendNotPaused() {
+        if (isSendPaused()) {
+            revert RequireContractSendIsNotPaused();
+        }
+        _;
+    }
+
+    modifier whenSendPaused() {
+        if (!isSendPaused()) {
+            revert RequireContractSendIsPaused();
         }
         _;
     }
@@ -156,11 +195,25 @@ abstract contract PausableUpgradeable is Initializable {
         emit NotPaused(false);
     }
 
+    function _pauseSend() internal virtual whenSendNotPaused {
+        _setSendPauseStorage(PAUSED);
+        emit SendPaused(true);
+    }
+
+    function _unpauseSend() internal virtual whenSendPaused {
+        _setSendPauseStorage(NOT_PAUSED);
+        emit SendNotPaused(false);
+    }
     /**
      * @dev Returns true if the method is paused, and false otherwise.
      */
     function isPaused() public view returns (bool) {
         PauseStorage storage $ = _getPauseStorage();
         return $._pauseFlag == PAUSED;
+    }
+
+    function isSendPaused() public view returns (bool) {
+        PauseStorage storage $ = _getPauseStorage();
+        return $._sendPausedFlag == PAUSED;
     }
 }

@@ -72,6 +72,10 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         _checkTransceiversInvariants();
     }
 
+    function _migrate() internal virtual override {
+        __Paused_init2_unchained();
+    }
+
     // =============== Storage ==============================================================
 
     bytes32 private constant PEERS_SLOT = bytes32(uint256(keccak256("ntt.peers")) - 1);
@@ -162,7 +166,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         uint256 amount,
         uint16 recipientChain,
         bytes32 recipient
-    ) external payable nonReentrant whenNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
         return
             _transferEntryPoint(amount, recipientChain, recipient, recipient, false, new bytes(1));
     }
@@ -175,7 +179,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         bytes32 refundAddress,
         bool shouldQueue,
         bytes memory transceiverInstructions
-    ) external payable nonReentrant whenNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
         return _transferEntryPoint(
             amount, recipientChain, recipient, refundAddress, shouldQueue, transceiverInstructions
         );

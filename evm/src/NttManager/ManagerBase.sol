@@ -335,6 +335,14 @@ abstract contract ManagerBase is
         _unpause();
     }
 
+    function pauseSend() public onlyOwnerOrPauser {
+        _pauseSend();
+    }
+
+    function unpauseSend() public onlyOwner {
+        _unpauseSend();
+    }
+
     /// @notice Transfer ownership of the Manager contract and all Transceiver contracts to a new owner.
     function transferOwnership(
         address newOwner
