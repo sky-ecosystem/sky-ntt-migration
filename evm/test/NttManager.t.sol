@@ -1309,4 +1309,61 @@ contract TestNttManager is Test, IRateLimiterEvents {
         e1.receiveMessage(transceiverMessage);
     }
 
+    function test_pauseSendAndPauseEverything() public {
+        (DummyTransceiver e1,) = TransceiverHelpersLib.setup_transceivers(nttManagerOther);
+        nttManagerOther.setThreshold(2);
+
+        // register nttManager peer
+        bytes32 peer = toWormholeFormat(address(nttManager));
+        nttManagerOther.setPeer(TransceiverHelpersLib.SENDING_CHAIN_ID, peer, 9, type(uint64).max);
+
+        TransceiverStructs.NttManagerMessage memory nttManagerMessage;
+        bytes memory transceiverMessage;
+        (nttManagerMessage, transceiverMessage) = TransceiverHelpersLib
+            .buildTransceiverMessageWithNttManagerPayload(
+            0, bytes32(0), peer, toWormholeFormat(address(nttManagerOther)), abi.encode("payload")
+        );
+
+        // Pause sending
+        vm.startPrank(nttManagerOther.owner());
+        nttManagerOther.pauseSend();
+        vm.stopPrank();
+
+        // Ensure sending is paused
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractSendIsNotPaused.selector)
+        );
+        nttManagerOther.transfer(0, 0, bytes32(0));
+
+        // Pause everything
+        vm.startPrank(nttManagerOther.owner());
+        nttManagerOther.pause();
+        vm.stopPrank();
+
+        // Ensure everything is paused
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
+        );
+        nttManagerOther.transfer(0, 0, bytes32(0));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
+        );
+        nttManagerOther.completeOutboundQueuedTransfer(0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
+        );
+        nttManagerOther.completeInboundQueuedTransfer(bytes32(0));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
+        );
+        nttManagerOther.executeMsg(0, bytes32(0), nttManagerMessage);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
+        );
+        e1.receiveMessage(transceiverMessage);
+    }
 }
