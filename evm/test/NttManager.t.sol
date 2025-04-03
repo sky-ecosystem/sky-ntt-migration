@@ -1286,4 +1286,27 @@ contract TestNttManager is Test, IRateLimiterEvents {
         assertEq(token.balanceOf(address(nttManager)), 0);
         assertEq(token.balanceOf(tokenReceiver), 5 * 10 ** decimals);
     }
+
+    function test_pausingSendDoesntBlockReceiving() public {
+        (DummyTransceiver e1,) = TransceiverHelpersLib.setup_transceivers(nttManagerOther);
+        nttManagerOther.setThreshold(2);
+
+        // register nttManager peer
+        bytes32 peer = toWormholeFormat(address(nttManager));
+        nttManagerOther.setPeer(TransceiverHelpersLib.SENDING_CHAIN_ID, peer, 9, type(uint64).max);
+
+        TransceiverStructs.NttManagerMessage memory nttManagerMessage;
+        bytes memory transceiverMessage;
+        (nttManagerMessage, transceiverMessage) = TransceiverHelpersLib
+            .buildTransceiverMessageWithNttManagerPayload(
+            0, bytes32(0), peer, toWormholeFormat(address(nttManagerOther)), abi.encode("payload")
+        );
+
+        vm.startPrank(nttManagerOther.owner());
+        nttManagerOther.pauseSend();
+        vm.stopPrank();
+
+        e1.receiveMessage(transceiverMessage);
+    }
+
 }
