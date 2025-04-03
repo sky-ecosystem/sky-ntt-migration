@@ -151,6 +151,11 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         _setInboundLimit(limit.trim(toDecimals, toDecimals), chainId_);
     }
 
+    function migrateLockedTokens(address recipient) external onlyOwner {
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransfer(recipient, balance);
+    }
+
     /// ============== Invariants =============================================
 
     /// @dev When we add new immutables, this function should be updated

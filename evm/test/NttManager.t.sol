@@ -1262,4 +1262,28 @@ contract TestNttManager is Test, IRateLimiterEvents {
             encodedInstructions
         );
     }
+
+    function test_migrateLockedTokens() public {
+        DummyToken token = DummyToken(nttManager.token());
+
+        address tokenReceiver = makeAddr("tokenReceiver");
+
+        uint8 decimals = token.decimals();
+
+        token.mintDummy(address(nttManager), 5 * 10 ** decimals);
+
+        vm.startPrank(address(0x123));
+        vm.expectRevert(
+            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(0x123))
+        );
+        nttManager.migrateLockedTokens(tokenReceiver);
+        vm.stopPrank();
+
+        vm.startPrank(nttManager.owner());
+        nttManager.migrateLockedTokens(tokenReceiver);
+        vm.stopPrank();
+
+        assertEq(token.balanceOf(address(nttManager)), 0);
+        assertEq(token.balanceOf(tokenReceiver), 5 * 10 ** decimals);
+    }
 }
