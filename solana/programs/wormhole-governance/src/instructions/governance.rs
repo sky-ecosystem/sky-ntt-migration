@@ -50,7 +50,7 @@ pub struct Governance<'info> {
     pub governance: UncheckedAccount<'info>,
 
     #[account(
-        constraint = vaa.emitter_chain() == Into::<u16>::into(Chain::Ethereum) @ GovernanceError::InvalidGovernanceChain,
+        constraint = vaa.emitter_chain() == Into::<u16>::into(Chain::Avalanche) @ GovernanceError::InvalidGovernanceChain,
         constraint = *vaa.emitter_address() == GOV_AUTHORITY @ GovernanceError::InvalidGovernanceEmitter,
         constraint = vaa.payload.1.governance_program_id == crate::ID @ GovernanceError::InvalidGovernanceProgram,
     )]
@@ -277,6 +277,40 @@ fn test_governance_message_serde() {
 
     let msg2 = GovernanceMessage::deserialize(&mut buf.as_slice()).unwrap();
     assert_eq!(msg, msg2);
+}
+
+#[test]
+fn test_governance_message_hello_world() {
+    // hello world program id
+    let program_id = Pubkey::try_from("3ynNB373Q3VAzKp7m4x238po36hjAGFXFJB4ybN2iTyg").unwrap();
+    let accounts = vec![];
+    // Anchor example hello world "Initialize" instruction data that logs "Greetings"
+    let data = hex::decode("afaf6d1f0d989bed").unwrap();
+    let msg = GovernanceMessage {
+        governance_program_id: crate::ID,
+        program_id,
+        accounts,
+        data,
+    };
+
+    let mut buf = Vec::new();
+    msg.serialize(&mut buf).unwrap();
+
+    println!("Serialized message: {:?}", hex::encode(&buf));
+
+    let chain = 6u16.to_be_bytes();
+    let sequence = 0u64.to_be_bytes();
+    let emitter_address = hex::decode("0000000000000000000000000804a6e2798f42c7f3c97215ddf958d5500f8ec8").unwrap();
+
+    let seed = [
+            ReplayProtection::SEED_PREFIX,
+            chain.as_ref(),
+            emitter_address.as_ref(),
+            sequence.as_ref()
+        ];
+
+        println!("seed: {:?}", seed);
+
 }
 
 #[test]
