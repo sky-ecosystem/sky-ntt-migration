@@ -26,7 +26,7 @@ async function main() {
     // console.log(NTT.pdas("5pHZajAVnKrT9ShVBx3DBuj2o4FZXvQtx8WZMt9Y8t9n").tokenAuthority().toBase58());
 
     // await initialize(connection, nttProgram, payer, mint);
-    await transferMintAuthority(connection, nttProgram, payer, mint, new PublicKey('Fty7h4FYAN7z8yjqaJExMHXbUoJYMcRjWYmggSxLbHp8'));
+    // await transferMintAuthority(connection, nttProgram, payer, mint, new PublicKey('Fty7h4FYAN7z8yjqaJExMHXbUoJYMcRjWYmggSxLbHp8'));
 }
 
 // https://explorer.solana.com/tx/5URXJYNxFTEpUHcPTJ3VZekDvtkq5hc9SXto7DfozZYioSckuTHNn3JQarTkMqV22dTwgkWgF9ys4FcCLBhFJ8eW?cluster=devnet

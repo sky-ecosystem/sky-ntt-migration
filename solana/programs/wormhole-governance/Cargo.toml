@@ -9,7 +9,7 @@ crate-type = ["cdylib", "lib"]
 name = "wormhole_governance"
 
 [features]
-default = ["solana-devnet"]
+default = ["mainnet"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []

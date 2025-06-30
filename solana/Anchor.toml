@@ -8,7 +8,7 @@ skip-lint = false
 
 [programs.localnet]
 dummy_transfer_hook = "39wgVSBkhzic2xo4Gi5d6un2NYrpig4bpXHGVJzUTea5"
-example_native_token_transfers = "nttiK1SepaQt6sZ4WGW5whvc9tEnGXGxuKeptcQPCcS"
+example_native_token_transfers = "5q4LmiR78aNYUiGiysfa8Hkx8ziEGGPFk6Uf3MQMzpf6"
 ntt_quoter = "7SfqnhMwFX5aiKvEL6VWXPhrnAKjdPz2YgBrpRc6kH6L"
 wormhole_governance = "67Wtx1DsvHZtL8iMpaJceqnNrHQuoxHqd9pLRCMqFyFz"
 
