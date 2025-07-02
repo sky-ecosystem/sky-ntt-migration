@@ -23,8 +23,6 @@ import solana from "@wormhole-foundation/sdk/solana";
 import evm from "@wormhole-foundation/sdk/evm";
 import { chainToBytes, derivePda, U64 } from "../lib/utils.js";
 
-const GOVERNANCE_PROGRAM_ID = new PublicKey('67Wtx1DsvHZtL8iMpaJceqnNrHQuoxHqd9pLRCMqFyFz');
-
 const REPLAY_SEED = new TextEncoder().encode('replay');
 
 async function *main() {
@@ -77,6 +75,8 @@ async function *main() {
       await new Promise(resolve => setTimeout(resolve, 30000));
     }
   }
+
+  const GOVERNANCE_PROGRAM_ID = new PublicKey(vaa.payload.actionArgs.governanceContract.address);
 
   const postedVaaAddress = utils.derivePostedVaaKey(contracts.coreBridge, Buffer.from(vaa.hash));
   console.log('posted VAA address: ', postedVaaAddress.toBase58());
