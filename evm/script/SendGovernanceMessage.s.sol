@@ -6,11 +6,11 @@ import {Script, console} from "forge-std/Script.sol";
 import {IWormhole} from "../lib/wormhole-solidity-sdk/src/interfaces/IWormhole.sol";
 
 contract SendGovernanceMessageScript is Script {
-    function run(address wormholeBridgeAddress, uint8 consistencyLevel, bytes memory payload) public {
+    function run(address wormholeBridgeAddress, uint8 consistencyLevel, bytes memory payload, uint32 nonce) public {
         IWormhole wormhole = IWormhole(wormholeBridgeAddress);
 
         vm.broadcast();
-        uint64 sequence = wormhole.publishMessage(1, payload, consistencyLevel);
+        uint64 sequence = wormhole.publishMessage(nonce, payload, consistencyLevel);
 
         console.log("Sequence:", sequence);
     }
