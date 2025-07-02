@@ -21,9 +21,11 @@ import {
 import { wormhole } from "@wormhole-foundation/sdk";
 import solana from "@wormhole-foundation/sdk/solana";
 import evm from "@wormhole-foundation/sdk/evm";
-import { derivePda, U64 } from "../lib/utils.js";
+import { chainToBytes, derivePda, U64 } from "../lib/utils.js";
 
 const GOVERNANCE_PROGRAM_ID = new PublicKey('67Wtx1DsvHZtL8iMpaJceqnNrHQuoxHqd9pLRCMqFyFz');
+
+const REPLAY_SEED = new TextEncoder().encode('replay');
 
 async function *main() {
   if (process.env['SOLANA_PRIVATE_KEY'] === undefined) {
@@ -78,8 +80,16 @@ async function *main() {
 
   const postedVaaAddress = utils.derivePostedVaaKey(contracts.coreBridge, Buffer.from(vaa.hash));
   console.log('posted VAA address: ', postedVaaAddress.toBase58());
-
-  // governance 
+  
+  const replayProtection = derivePda(
+    [
+      REPLAY_SEED,
+      chainToBytes(vaa.emitterChain),
+      vaa.emitterAddress.address,
+      U64.toBeBytes(vaa.sequence),
+    ],
+    GOVERNANCE_PROGRAM_ID
+  )
 
   // sighash("global", "governance")
   const data = Buffer.from([11, 247, 203, 189, 82, 97, 41, 84]);
@@ -112,15 +122,7 @@ async function *main() {
       },
       // replay protection
       {
-        pubkey: derivePda(
-          [
-            Uint8Array.from([114, 101, 112, 108, 97, 121]),
-            Uint8Array.from([0, 6]),
-            Uint8Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 4, 166, 226, 121, 143, 66, 199, 243, 201, 114, 21, 221, 249, 88, 213, 80, 15, 142, 200]),
-            U64.toBeBytes(vaa.sequence),
-          ],
-          GOVERNANCE_PROGRAM_ID
-        ),
+        pubkey: replayProtection,
         isSigner: false,
         isWritable: true
       },
