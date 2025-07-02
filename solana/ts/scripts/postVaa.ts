@@ -25,7 +25,7 @@ import { chainToBytes, derivePda, U64 } from "../lib/utils.js";
 
 const REPLAY_SEED = new TextEncoder().encode('replay');
 
-async function *main() {
+async function main() {
   if (process.env['SOLANA_PRIVATE_KEY'] === undefined) {
     throw new Error("SOLANA_PRIVATE_KEY is not set");
   }
@@ -41,7 +41,6 @@ async function *main() {
 
   const wh = await wormhole("Testnet", [evm, solana]);
   const chain = wh.getChain("Solana");
-  // const core = await chain.getWormholeCore() as SolanaWormholeCore<"Testnet", "Solana">;
   const contracts = (await chain.getWormholeCore() as any).contracts;
   const core = new SolanaWormholeCore("Testnet", "Solana", connection, contracts);
 
@@ -50,7 +49,6 @@ async function *main() {
     "GeneralPurposeGovernance:GeneralPurposeSolana",
     25 * 60 * 1000
   );
-  console.log(vaa);
 
   if (!vaa) {
     throw new Error("VAA not found");
@@ -58,28 +56,27 @@ async function *main() {
 
   for await (const tx of core.postVaa(payer.publicKey, vaa)) {
     if (isVersionedTransaction(tx)) {
-    } else {
-      console.log('sender pubkey: ', payer.publicKey.toBase58());
-      console.log('trying to send tx: ', tx.description);
-      console.log('required signers: ', tx.transaction.signers?.map(s => s));
-      const solanaTx = tx.transaction.transaction as Transaction;
-      // solanaTx.feePayer = payer.publicKey;
-      solanaTx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-
-      solanaTx.sign(...[...tx.transaction.signers ?? [], payer]);
-      const serializedTx = solanaTx.serialize();
-      console.log('serialized tx: ', serializedTx.toString('base64'));
-      const txHash = await connection.sendRawTransaction(serializedTx);
-      console.log("Transaction sent:", txHash);
-      console.log('wait 30 seconds for finality before sending next tx')
-      await new Promise(resolve => setTimeout(resolve, 30000));
+      throw new Error("Versioned transaction not supported");
     }
+
+    console.log('Sending transaction: ', tx.description);
+    const solanaTx = tx.transaction.transaction as Transaction;
+    solanaTx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    solanaTx.sign(...[...tx.transaction.signers ?? [], payer]);
+    const serializedTx = solanaTx.serialize();
+    console.log('serialized tx: ', serializedTx.toString('base64'));
+    const txHash = await connection.sendRawTransaction(serializedTx);
+    console.log("Transaction sent:", txHash);
+    console.log('wait 30 seconds for finality before sending next tx\n\n')
+    await new Promise(resolve => setTimeout(resolve, 30000));
   }
 
-  const GOVERNANCE_PROGRAM_ID = new PublicKey(vaa.payload.actionArgs.governanceContract.address);
+  const governanceProgram = new PublicKey(vaa.payload.actionArgs.governanceContract.address);
+  const governedProgram = new PublicKey(vaa.payload.actionArgs.payload.slice(0, 32));
 
   const postedVaaAddress = utils.derivePostedVaaKey(contracts.coreBridge, Buffer.from(vaa.hash));
-  console.log('posted VAA address: ', postedVaaAddress.toBase58());
+  console.log('Posted VAA address: ', postedVaaAddress.toBase58());
   
   const replayProtection = derivePda(
     [
@@ -88,7 +85,7 @@ async function *main() {
       vaa.emitterAddress.address,
       U64.toBeBytes(vaa.sequence),
     ],
-    GOVERNANCE_PROGRAM_ID
+    governanceProgram
   )
 
   const replayAccountInfo = await connection.getAccountInfo(replayProtection);
@@ -103,39 +100,33 @@ async function *main() {
   // sighash("global", "governance")
   const data = Buffer.from([11, 247, 203, 189, 82, 97, 41, 84]);
   const ix = new TransactionInstruction({
-    programId: GOVERNANCE_PROGRAM_ID,
+    programId: governanceProgram,
     keys: [
-      // payer
       {
         pubkey: payer.publicKey,
         isSigner: true,
         isWritable: true
       },
-      // governance PDA
       {
-        pubkey: derivePda('governance', GOVERNANCE_PROGRAM_ID),
+        pubkey: derivePda('governance', governanceProgram),
         isSigner: false,
         isWritable: true
       },
-      // vaa
       {
         pubkey: postedVaaAddress,
         isSigner: false,
         isWritable: false
       },
-      // program
       {
-        pubkey: new PublicKey('3ynNB373Q3VAzKp7m4x238po36hjAGFXFJB4ybN2iTyg'),
+        pubkey: governedProgram,
         isSigner: false,
         isWritable: true
       },
-      // replay protection
       {
         pubkey: replayProtection,
         isSigner: false,
         isWritable: true
       },
-      // system program
       {
         pubkey: SystemProgram.programId,
         isSigner: false,
@@ -151,15 +142,13 @@ async function *main() {
   tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
   tx.sign(payer);
 
+  console.log('Delivering governance message...')
+
   const serializedTx = tx.serialize();
-  console.log('serialized tx: ', serializedTx.toString('base64'));
+  console.log('Serialized tx: ', serializedTx.toString('base64'));
 
   const txHash = await connection.sendRawTransaction(serializedTx);
-  console.log("Transaction sent:", txHash);
-
-  console.log("done");
+  console.log("Governance message delivery transaction sent:", txHash);
 }
 
-for await (const tx of main()) {
-  console.log(tx);
-}
+main()
