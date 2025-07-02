@@ -91,6 +91,15 @@ async function *main() {
     GOVERNANCE_PROGRAM_ID
   )
 
+  const replayAccountInfo = await connection.getAccountInfo(replayProtection);
+
+  if (replayAccountInfo !== null) {
+    console.log('\nGovernance message already delivered - replay protection account exists', {
+      replayProtection: replayProtection.toBase58(),
+    })
+    return;
+  }
+
   // sighash("global", "governance")
   const data = Buffer.from([11, 247, 203, 189, 82, 97, 41, 84]);
   const ix = new TransactionInstruction({
