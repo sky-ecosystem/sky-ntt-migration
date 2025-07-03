@@ -10,3 +10,7 @@
 [submodule "evm/lib/solidity-bytes-utils"]
 	path = evm/lib/solidity-bytes-utils
 	url = https://github.com/GNSPS/solidity-bytes-utils
+[submodule "evm/lib/wh-lz-migration"]
+	path = evm/lib/wh-lz-migration
+	url = git@github.com:telome/wh-lz-migration.git
+	branch = dev
