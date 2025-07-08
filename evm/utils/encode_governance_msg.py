@@ -3,9 +3,10 @@ import base58
 
 MODULE = "000000000000000047656e6572616c507572706f7365476f7665726e616e6365" # "GeneralPurposeGovernance" (left padded)
 ACTION = "02" # SOLANA CALL
-CHAIN = "0001" # CHAIN 
+CHAIN = "0001" # SOLANA CHAIN ID
 GOVERNED_PROGRAM_ID = "2c43318f0f99dfd8c0ebc65b0b23cc661fcd1df64af6aef33b7b83eca8e58197" # Hello world program ID (3ynNB373Q3VAzKp7m4x238po36hjAGFXFJB4ybN2iTyg)
-DATA = "00000008afaf6d1f0d989bed" # "Initialize" instruction data
+DATA_LENGTH = "00000008"
+DATA = "afaf6d1f0d989bed" # "Initialize" instruction data
 
 def encode_governance_msg(governance_program_id_base58: str) -> str:
     """
@@ -19,7 +20,7 @@ def encode_governance_msg(governance_program_id_base58: str) -> str:
             raise Exception(f"Invalid program ID length. Expected 32 bytes, got {program_id_len}")
         
         program_id_hex = program_id_bytes.hex()
-        governance_msg = MODULE + ACTION + CHAIN + program_id_hex + GOVERNED_PROGRAM_ID + DATA
+        governance_msg = MODULE + ACTION + CHAIN + program_id_hex + GOVERNED_PROGRAM_ID + DATA_LENGTH + DATA
         return governance_msg
     except Exception as e:
         raise Exception(f"Failed to decode governance program ID '{governance_program_id_base58}'. Error: {e}")
