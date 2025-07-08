@@ -137,7 +137,7 @@ ntt push -y -p deployment.limits.json --payer $SOLANA_WALLET_KEYPAIR
 
 cat deployment.limits.json                                  |
     jq ".chains.Avalanche.owner = \"$ETH_PAUSE_PROXY_ADDR\"" |
-    jq ".chains.Solana.owner = \"$TARGET_GOV_AUTHORITY\""   |
+    jq ".chains.Solana.owner = \"$TARGET_GOV_AUTHORITY\""   \
     > deployment.final.json
 
 ntt push -y -p deployment.final.json --payer $SOLANA_WALLET_KEYPAIR
