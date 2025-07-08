@@ -20,6 +20,8 @@ to the specific Chain that you are sending messages from. For example for Avalan
 constraint = vaa.emitter_chain() == Into::<u16>::into(Chain::Avalanche) @ GovernanceError::InvalidGovernanceChain,
 ```
 
+In `solana/programs/wormhole-governance/src/lib.rs:10`, override the `GOV_AUTHORITY` constant with the EVM address of the emitter account (the address must be left-padded to 32 bytes).
+
 ## Build
 
 In Solana directory:
@@ -27,6 +29,15 @@ In Solana directory:
 ```
 make build
 ```
+
+Then run 
+
+```bash
+anchor keys sync
+anchor build
+```
+
+to update the ID declarations and re-build the programs.
 
 ## Deploy
 
@@ -43,11 +54,26 @@ In EVM directory:
 cd evm
 ```
 
+Download the solidity contracts with
+
+```
+forge install
+```
+
 Send message from EVM:
 
 ```
 forge script script/SendGovernanceMessage.s.sol --sig "run(address,uint8,bytes,uint32)" --rpc-url="RPC_URL" WORMHOLE_BRIDGE_ADDRESS CONSISTENCY_LEVEL GOVERNANCE_MSG NONCE --private-key $EVM_PRIVATE_KEY --broadcast
 ```
+
+In order for the governance message to be valid, it must contain the (previously deployed) Wormhole governance program ID. To generate a valid message, run the following command from `evm` directory (it requires the `base58` python module, which can be installed with `pip install base58`)
+
+```bash
+GOVERNANCE_PROGRAM_ID=$(solana-keygen pubkey ../solana/target/deploy/wormhole_governance-keypair.json)
+python3 utils/encode_governance_msg.py $GOVERNANCE_PROGRAM_ID
+```
+
+This will output a governance message that includes the given governance program ID (derived from `solana/target/deploy/wormhole_governance-keypair.json`), which can be used as an argument to the `script/SendGovernanceMessage.s.sol` script.
 
 Example send from Fuji:
 ```
