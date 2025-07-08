@@ -1,13 +1,17 @@
 import sys
 import base58
 
-MODULE = "000000000000000047656e6572616c507572706f7365476f7665726e616e6365"
-ACTION = "02"
-CHAIN = "0001"
-GOVERNED_PROGRAM_ID = "2c43318f0f99dfd8c0ebc65b0b23cc661fcd1df64af6aef33b7b83eca8e58197"
-DATA = "00000008afaf6d1f0d989bed"
+MODULE = "000000000000000047656e6572616c507572706f7365476f7665726e616e6365" # "GeneralPurposeGovernance" (left padded)
+ACTION = "02" # SOLANA CALL
+CHAIN = "0001" # CHAIN 
+GOVERNED_PROGRAM_ID = "2c43318f0f99dfd8c0ebc65b0b23cc661fcd1df64af6aef33b7b83eca8e58197" # Hello world program ID (3ynNB373Q3VAzKp7m4x238po36hjAGFXFJB4ybN2iTyg)
+DATA = "00000008afaf6d1f0d989bed" # "Initialize" instruction data
 
-def encode_governance_msg(governance_program_id_base58: str):
+def encode_governance_msg(governance_program_id_base58: str) -> str:
+    """
+    Returns a governance message that calls the 'Initialize' instruction
+    in the Hello world program using the given governance program.
+    """
     try:
         program_id_bytes = base58.b58decode(governance_program_id_base58)
         program_id_len = len(program_id_bytes)
