@@ -66,11 +66,11 @@ Send message from EVM:
 forge script script/SendGovernanceMessage.s.sol --sig "run(address,uint8,bytes,uint32)" --rpc-url="RPC_URL" WORMHOLE_BRIDGE_ADDRESS CONSISTENCY_LEVEL GOVERNANCE_MSG NONCE --private-key $EVM_PRIVATE_KEY --broadcast
 ```
 
-Make sure the `GOVERNANCE_MSG` contains the (previously deployed) Wormhole governance program ID. To generate a valid message, run the following command from `evm` directory (it requires the `base58` python module, which can be installed with `pip install base58`)
+Make sure the `GOVERNANCE_MSG` contains the (previously deployed) Wormhole governance program ID. To generate a valid message, run the following command from the `evm` directory
 
 ```bash
 GOVERNANCE_PROGRAM_ID=$(solana-keygen pubkey ../solana/target/deploy/wormhole_governance-keypair.json)
-python3 utils/encode_governance_msg.py $GOVERNANCE_PROGRAM_ID
+bun ../cli/utils/encodeGovernanceMsg.ts $GOVERNANCE_PROGRAM_ID
 ```
 
 This will output a governance message (as a hex string) that includes the given governance program ID (derived from `solana/target/deploy/wormhole_governance-keypair.json`), which can be used as an argument to the `script/SendGovernanceMessage.s.sol` script.
