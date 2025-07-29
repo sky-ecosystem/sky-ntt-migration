@@ -95,15 +95,15 @@ abstract contract RateLimiter is IRateLimiter, IRateLimiterEvents {
 
     function _setOutboundLimit(
         TrimmedAmount limit
-    ) internal virtual {
+    ) internal {
         _setLimit(limit, _getOutboundLimitParamsStorage());
     }
 
-    function getOutboundLimitParams() public pure virtual returns (RateLimitParams memory) {
+    function getOutboundLimitParams() public pure returns (RateLimitParams memory) {
         return _getOutboundLimitParamsStorage();
     }
 
-    function getCurrentOutboundCapacity() public view virtual returns (uint256) {
+    function getCurrentOutboundCapacity() public view returns (uint256) {
         TrimmedAmount trimmedCapacity = _getCurrentCapacity(getOutboundLimitParams());
         uint8 decimals = tokenDecimals();
         return trimmedCapacity.untrim(decimals);
@@ -111,23 +111,23 @@ abstract contract RateLimiter is IRateLimiter, IRateLimiterEvents {
 
     function getOutboundQueuedTransfer(
         uint64 queueSequence
-    ) public view virtual returns (OutboundQueuedTransfer memory) {
+    ) public view returns (OutboundQueuedTransfer memory) {
         return _getOutboundQueueStorage()[queueSequence];
     }
 
-    function _setInboundLimit(TrimmedAmount limit, uint16 chainId_) internal virtual {
+    function _setInboundLimit(TrimmedAmount limit, uint16 chainId_) internal {
         _setLimit(limit, _getInboundLimitParamsStorage()[chainId_]);
     }
 
     function getInboundLimitParams(
         uint16 chainId_
-    ) public view virtual returns (RateLimitParams memory) {
+    ) public view returns (RateLimitParams memory) {
         return _getInboundLimitParamsStorage()[chainId_];
     }
 
     function getCurrentInboundCapacity(
         uint16 chainId_
-    ) public view virtual returns (uint256) {
+    ) public view returns (uint256) {
         TrimmedAmount trimmedCapacity = _getCurrentCapacity(getInboundLimitParams(chainId_));
         uint8 decimals = tokenDecimals();
         return trimmedCapacity.untrim(decimals);
@@ -135,7 +135,7 @@ abstract contract RateLimiter is IRateLimiter, IRateLimiterEvents {
 
     function getInboundQueuedTransfer(
         bytes32 digest
-    ) public view virtual returns (InboundQueuedTransfer memory) {
+    ) public view returns (InboundQueuedTransfer memory) {
         return _getInboundQueueStorage()[digest];
     }
 
