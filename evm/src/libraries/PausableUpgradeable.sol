@@ -43,15 +43,15 @@ abstract contract PausableUpgradeable is Initializable {
      */
     error RequireContractIsPaused();
 
-    /** 
-     * @dev Contract send is paused, blocking
-     */
-    error RequireContractSendIsPaused();
-
     /**
      * @dev Contract send is not paused, functionality is unblocked
      */
     error RequireContractSendIsNotPaused();
+
+    /** 
+     * @dev Contract send is paused, blocking
+     */
+    error RequireContractSendIsPaused();
 
     /**
      * @dev the pauser is not a valid pauser account (e.g. `address(0)`)
@@ -61,8 +61,8 @@ abstract contract PausableUpgradeable is Initializable {
     // @dev Emitted when the contract is paused
     event Paused(bool paused);
     event NotPaused(bool notPaused);
-    event SendPaused(bool sendPaused);
-    event SendNotPaused(bool sendNotPaused);
+    event SendPaused();
+    event SendNotPaused();
     
     bytes32 private constant PAUSE_SLOT = bytes32(uint256(keccak256("Pause.pauseFlag")) - 1);
     bytes32 private constant PAUSER_ROLE_SLOT = bytes32(uint256(keccak256("Pause.pauseRole")) - 1);
@@ -197,12 +197,12 @@ abstract contract PausableUpgradeable is Initializable {
 
     function _pauseSend() internal virtual whenSendNotPaused {
         _setSendPauseStorage(PAUSED);
-        emit SendPaused(true);
+        emit SendPaused();
     }
 
     function _unpauseSend() internal virtual whenSendPaused {
         _setSendPauseStorage(NOT_PAUSED);
-        emit SendNotPaused(false);
+        emit SendNotPaused();
     }
     /**
      * @dev Returns true if the method is paused, and false otherwise.

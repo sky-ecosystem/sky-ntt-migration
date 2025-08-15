@@ -1366,4 +1366,40 @@ contract TestNttManager is Test, IRateLimiterEvents {
         );
         e1.receiveMessage(transceiverMessage);
     }
+
+    function test_unpauseSend() public {
+        // First pause sending
+        vm.prank(nttManagerOther.owner());
+        nttManagerOther.pauseSend();
+
+        // Verify sending is paused
+        assertEq(nttManagerOther.isSendPaused(), true);
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractSendIsNotPaused.selector)
+        );
+        nttManagerOther.transfer(0, 0, bytes32(0));
+
+        // Now unpause sending
+        vm.prank(nttManagerOther.owner());
+        nttManagerOther.unpauseSend();
+
+        // Verify sending is unpaused
+        assertEq(nttManagerOther.isSendPaused(), false);
+        
+        // Verify that transfers work again (should not revert)
+        // Note: We don't actually complete this transfer, just verify it doesn't revert due to pause
+        try nttManagerOther.transfer(1 ether, chainId, toWormholeFormat(address(0x123))) {
+            // Transfer should succeed (or fail for other reasons, but not pause)
+        } catch (bytes memory reason) {
+            // Make sure it didn't fail due to pause
+            bytes4 pauseSelector = PausableUpgradeable.RequireContractSendIsNotPaused.selector;
+            bytes4 actualSelector;
+            assembly {
+                actualSelector := mload(add(reason, 0x20))
+            }
+            assertNotEq(actualSelector, pauseSelector, "Transfer should not fail due to send pause");
+        }
+    }
+
+    
 }

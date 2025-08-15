@@ -11,7 +11,7 @@ pub struct TransferMintAuthority<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    pub config: NotPausedConfig<'info>,
+    pub config: Account<'info, Config>,
 
     #[account(
         seeds = [crate::TOKEN_AUTHORITY_SEED],

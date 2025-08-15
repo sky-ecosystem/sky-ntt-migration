@@ -380,11 +380,12 @@ fn insert_into_outbox(
             inbox_rate_limit.rate_limit.refill(now, amount);
             now
         }
-        RateLimitResult::Delayed(release_timestamp) => {
-            if !should_queue {
-                return Err(NTTError::TransferExceedsRateLimit.into());
+        RateLimitResult::Delayed(_release_timestamp) => {
+            if should_queue {
+                return Err(NTTError::QueueNotAvailable.into());
             }
-            release_timestamp
+
+            return Err(NTTError::TransferExceedsRateLimit.into());
         }
     };
 

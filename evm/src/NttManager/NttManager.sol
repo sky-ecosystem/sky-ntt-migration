@@ -41,6 +41,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     using TrimmedAmountLib for uint256;
     using TrimmedAmountLib for TrimmedAmount;
 
+    // @dev kept at 1.1.0 to avoid need to make changes to offchain code including NTT CLI
     string public constant NTT_MANAGER_VERSION = "1.1.0";
 
     // =============== Setup =================================================================
@@ -278,7 +279,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     /// @inheritdoc INttManager
     function completeOutboundQueuedTransfer(
         uint64 messageSequence
-    ) external payable nonReentrant whenNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
         // find the message in the queue
         OutboundQueuedTransfer memory queuedTransfer = _getOutboundQueueStorage()[messageSequence];
         if (queuedTransfer.txTimestamp == 0) {
