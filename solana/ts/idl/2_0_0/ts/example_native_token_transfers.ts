@@ -1166,7 +1166,7 @@ export type ExampleNativeTokenTransfers = {
       "accounts": [
         {
           "name": "payer",
-          "isMut": true,
+          "isMut": false,
           "isSigner": true
         },
         {
@@ -1195,11 +1195,6 @@ export type ExampleNativeTokenTransfers = {
         {
           "name": "tokenProgram",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "custody",
-          "isMut": true,
           "isSigner": false
         }
       ],

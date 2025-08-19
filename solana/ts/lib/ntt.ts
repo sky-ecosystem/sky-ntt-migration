@@ -293,12 +293,7 @@ export namespace NTT {
         config: { config: pdas.configAccount() },
         mint: args.mint,
         tokenProgram: args.tokenProgram,
-        tokenAuthority: pdas.tokenAuthority(),
-        custody: await NTT.custodyAccountAddress(
-          pdas,
-          args.mint,
-          args.tokenProgram
-        ),
+        tokenAuthority: pdas.tokenAuthority()
       })
       .instruction();
   }

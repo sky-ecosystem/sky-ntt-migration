@@ -8,7 +8,6 @@ use crate::
 #[derive(Accounts)]
 #[instruction(args: TransferMintAuthorityArgs)]
 pub struct TransferMintAuthority<'info> {
-    #[account(mut)]
     pub payer: Signer<'info>,
 
     pub config: Account<'info, Config>,
@@ -17,7 +16,7 @@ pub struct TransferMintAuthority<'info> {
         seeds = [crate::TOKEN_AUTHORITY_SEED],
         bump,
     )]
-    /// CHECK The seeds constraint ensures that this is the correct address
+    /// CHECK: The seeds constraint ensures that this is the correct address
     pub token_authority: UncheckedAccount<'info>,
 
     #[account(
@@ -28,13 +27,6 @@ pub struct TransferMintAuthority<'info> {
     pub mint: InterfaceAccount<'info, token_interface::Mint>,
 
     pub token_program: Interface<'info, token_interface::TokenInterface>,
-
-    /// CHECK: the token program checks if this indeed the right authority for the mint
-    #[account(
-        mut,
-        address = config.custody
-    )]
-    pub custody: InterfaceAccount<'info, token_interface::TokenAccount>,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -51,7 +43,7 @@ pub fn transfer_mint_authority<'info>(
     token_interface::set_authority(
         CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), 
         token_interface::SetAuthority {
-            current_authority:  ctx.accounts.token_authority.to_account_info(),
+            current_authority: ctx.accounts.token_authority.to_account_info(),
             account_or_mint: ctx.accounts.mint.to_account_info(),
         },
         &[&[

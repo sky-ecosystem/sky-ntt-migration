@@ -1335,6 +1335,12 @@ contract TestNttManager is Test, IRateLimiterEvents {
         );
         nttManagerOther.transfer(0, 0, bytes32(0));
 
+        // Test second interface overload as well
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractSendIsNotPaused.selector)
+        );
+        nttManagerOther.transfer(0, 0, bytes32(0), bytes32(0), false, new bytes(1));
+
         // Pause everything
         vm.startPrank(nttManagerOther.owner());
         nttManagerOther.pause();
@@ -1345,6 +1351,12 @@ contract TestNttManager is Test, IRateLimiterEvents {
             abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
         );
         nttManagerOther.transfer(0, 0, bytes32(0));
+
+        // Test second interface overload as well
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
+        );
+        nttManagerOther.transfer(0, 0, bytes32(0), bytes32(0), false, new bytes(1));
 
         vm.expectRevert(
             abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
@@ -1368,6 +1380,17 @@ contract TestNttManager is Test, IRateLimiterEvents {
     }
 
     function test_unpauseSend() public {
+        DummyToken token = DummyToken(nttManagerOther.token());
+        token.mintDummy(address(this), 2 ether);
+        token.approve(address(nttManagerOther), 2 ether);
+
+        vm.prank(nttManagerOther.owner());
+        nttManagerOther.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
+
+        DummyTransceiver dummyTransceiverOther = new DummyTransceiver(address(nttManagerOther));
+        vm.prank(nttManagerOther.owner());
+        nttManagerOther.setTransceiver(address(dummyTransceiverOther));
+
         // First pause sending
         vm.prank(nttManagerOther.owner());
         nttManagerOther.pauseSend();
@@ -1377,7 +1400,13 @@ contract TestNttManager is Test, IRateLimiterEvents {
         vm.expectRevert(
             abi.encodeWithSelector(PausableUpgradeable.RequireContractSendIsNotPaused.selector)
         );
-        nttManagerOther.transfer(0, 0, bytes32(0));
+        nttManagerOther.transfer(1 ether, chainId2, toWormholeFormat(address(0x123)));
+
+        // Test second interface overload as well
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.RequireContractSendIsNotPaused.selector)
+        );
+        nttManagerOther.transfer(1 ether, chainId2, toWormholeFormat(address(0x123)), toWormholeFormat(address(0x123)), false, new bytes(1));
 
         // Now unpause sending
         vm.prank(nttManagerOther.owner());
@@ -1385,21 +1414,11 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         // Verify sending is unpaused
         assertEq(nttManagerOther.isSendPaused(), false);
-        
-        // Verify that transfers work again (should not revert)
-        // Note: We don't actually complete this transfer, just verify it doesn't revert due to pause
-        try nttManagerOther.transfer(1 ether, chainId, toWormholeFormat(address(0x123))) {
-            // Transfer should succeed (or fail for other reasons, but not pause)
-        } catch (bytes memory reason) {
-            // Make sure it didn't fail due to pause
-            bytes4 pauseSelector = PausableUpgradeable.RequireContractSendIsNotPaused.selector;
-            bytes4 actualSelector;
-            assembly {
-                actualSelector := mload(add(reason, 0x20))
-            }
-            assertNotEq(actualSelector, pauseSelector, "Transfer should not fail due to send pause");
-        }
-    }
 
-    
+        // Outbound transfer should succeed
+        nttManagerOther.transfer(1 ether, chainId2, toWormholeFormat(address(0x123)));
+
+        // Test second interface overload as well
+        nttManagerOther.transfer(1 ether, chainId2, toWormholeFormat(address(0x123)), toWormholeFormat(address(0x123)), false, new bytes(1));
+    }
 }
