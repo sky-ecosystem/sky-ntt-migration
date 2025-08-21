@@ -30,7 +30,7 @@ cfg_if::cfg_if! {
     if #[cfg(feature = "token-sky")] {
         declare_id!("STTZMMZhaytNtyHshzZ8HAgJoTVWhwrKFG7qk7xtSst");
     } else if #[cfg(feature = "token-usds")] {
-        declare_id!("STTUVCMPuNbk21y1J6nqEGXSQ8HKvFmFBKnCvKHTrWn");
+        declare_id!("5q4LmiR78aNYUiGiysfa8Hkx8ziEGGPFk6Uf3MQMzpf6");
     } else {
         declare_id!("nttiK1SepaQt6sZ4WGW5whvc9tEnGXGxuKeptcQPCcS");
     }

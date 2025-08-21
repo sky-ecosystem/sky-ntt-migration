@@ -1298,7 +1298,7 @@ async function deploySolana<N extends Network, C extends SolanaChains>(
         dummy.chain,
         dummy.connection,
         dummy.contracts,
-        version ?? undefined
+        undefined
     );
 
     // get the mint authority of 'token'

@@ -15,15 +15,18 @@ async function main() {
 
     const nttProgram = getNttProgram(
         connection,
-        "LT7z3KBNJZRvJTprYGMWERSBFpwTdNqPzUnFPzYSgt3",
+        "5pHZajAVnKrT9ShVBx3DBuj2o4FZXvQtx8WZMt9Y8t9n",
         "2.0.0" as IdlVersion
       );
 
     const key = bs58.decode(process.env.SOLANA_PRIVATE_KEY);
     const payer = Keypair.fromSecretKey(key);
-    const mint = new PublicKey('63YgAdH2VRXW3CWWLQG7uDLnYkQRZ6WTFRzq8tJ9fQBY');
+    const mint = new PublicKey('2iQ3x4UvDHt5cvWzUEwLAdPTCZifkB1DMVyjcaSmhe4u');
 
-    await transferMintAuthority(connection, nttProgram, payer, mint, new PublicKey('Fty7h4FYAN7z8yjqaJExMHXbUoJYMcRjWYmggSxLbHp8'));
+    // console.log(NTT.pdas("5pHZajAVnKrT9ShVBx3DBuj2o4FZXvQtx8WZMt9Y8t9n").tokenAuthority().toBase58());
+
+    // await initialize(connection, nttProgram, payer, mint);
+    // await transferMintAuthority(connection, nttProgram, payer, mint, new PublicKey('Fty7h4FYAN7z8yjqaJExMHXbUoJYMcRjWYmggSxLbHp8'));
 }
 
 // https://explorer.solana.com/tx/5URXJYNxFTEpUHcPTJ3VZekDvtkq5hc9SXto7DfozZYioSckuTHNn3JQarTkMqV22dTwgkWgF9ys4FcCLBhFJ8eW?cluster=devnet
