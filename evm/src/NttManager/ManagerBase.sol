@@ -324,7 +324,7 @@ abstract contract ManagerBase is
         address newImplementation
     ) external onlyOwner {
         _upgrade(newImplementation);
-    }    
+    }
 
     /// @inheritdoc IManagerBase
     function setPause(bool pause, bool controlSendingOnly) public {

@@ -8,7 +8,7 @@ import "./external/OwnableUpgradeable.sol";
 abstract contract PausableOwnable is PausableUpgradeable, OwnableUpgradeable {
     /*
      * @dev Modifier to allow only the Pauser and the Owner to access pausing functionality
-     */     
+     */
     modifier onlyOwnerOrPauser() {
         _checkOwnerOrPauser(owner());
         _;
