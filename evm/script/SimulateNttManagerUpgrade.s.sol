@@ -72,7 +72,7 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         vm.stopPrank();
 
         vm.startPrank(nttManager.owner());
-        nttManager.pauseSend();
+        nttManager.setPause(true, true);
         vm.stopPrank();
 
         console2.log("after pauseSend");

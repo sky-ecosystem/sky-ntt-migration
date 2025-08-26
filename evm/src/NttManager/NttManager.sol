@@ -125,17 +125,11 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
             revert InvalidPeerSameChainId();
         }
 
-        NttManagerPeer memory oldPeer = _getPeersStorage()[peerChainId];
-
         _getPeersStorage()[peerChainId].peerAddress = peerContract;
         _getPeersStorage()[peerChainId].tokenDecimals = decimals;
 
         uint8 toDecimals = tokenDecimals();
         _setInboundLimit(inboundLimit.trim(toDecimals, toDecimals), peerChainId);
-
-        emit PeerUpdated(
-            peerChainId, oldPeer.peerAddress, oldPeer.tokenDecimals, peerContract, decimals
-        );
     }
 
     /// @inheritdoc INttManager

@@ -324,23 +324,15 @@ abstract contract ManagerBase is
         address newImplementation
     ) external onlyOwner {
         _upgrade(newImplementation);
-    }
+    }    
 
     /// @inheritdoc IManagerBase
-    function pause() public onlyOwnerOrPauser {
-        _pause();
-    }
+    function setPause(bool pause, bool controlSendingOnly) public {
+        if (owner() != msg.sender && !(pauser() == msg.sender && pause)) {
+            revert InvalidPauser(msg.sender);
+        }
 
-    function unpause() public onlyOwner {
-        _unpause();
-    }
-
-    function pauseSend() public onlyOwnerOrPauser {
-        _pauseSend();
-    }
-
-    function unpauseSend() public onlyOwner {
-        _unpauseSend();
+        _setPause(pause, controlSendingOnly);
     }
 
     /// @notice Transfer ownership of the Manager contract and all Transceiver contracts to a new owner.

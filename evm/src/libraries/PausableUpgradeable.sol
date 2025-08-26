@@ -32,8 +32,6 @@ abstract contract PausableUpgradeable is Initializable {
     uint256 private constant NOT_PAUSED = 1;
     uint256 private constant PAUSED = 2;
 
-    event PauserTransferred(address indexed oldPauser, address indexed newPauser);
-
     /**
      * @dev Contract is not paused, functionality is unblocked
      */
@@ -57,12 +55,6 @@ abstract contract PausableUpgradeable is Initializable {
      * @dev the pauser is not a valid pauser account (e.g. `address(0)`)
      */
     error InvalidPauser(address account);
-
-    // @dev Emitted when the contract is paused
-    event Paused(bool paused);
-    event NotPaused(bool notPaused);
-    event SendPaused();
-    event SendNotPaused();
     
     bytes32 private constant PAUSE_SLOT = bytes32(uint256(keccak256("Pause.pauseFlag")) - 1);
     bytes32 private constant PAUSER_ROLE_SLOT = bytes32(uint256(keccak256("Pause.pauseRole")) - 1);
@@ -177,33 +169,14 @@ abstract contract PausableUpgradeable is Initializable {
         }
     }
 
-    /**
-     * @dev pauses the function and emits the `Paused` event
-     */
-    function _pause() internal virtual whenNotPaused {
-        // this can only be set to PAUSED when the state is NOTPAUSED
-        _setPauseStorage(PAUSED);
-        emit Paused(true);
+    function _setPause(bool pause, bool controlSendingOnly) internal virtual {
+        if (controlSendingOnly) {
+            _setSendPauseStorage(pause ? PAUSED : NOT_PAUSED);
+        } else {
+            _setPauseStorage(pause ? PAUSED : NOT_PAUSED);
+        }
     }
 
-    /**
-     * @dev unpauses the function
-     */
-    function _unpause() internal virtual whenPaused {
-        // this can only be set to NOTPAUSED when the state is PAUSED
-        _setPauseStorage(NOT_PAUSED);
-        emit NotPaused(false);
-    }
-
-    function _pauseSend() internal virtual whenSendNotPaused {
-        _setSendPauseStorage(PAUSED);
-        emit SendPaused();
-    }
-
-    function _unpauseSend() internal virtual whenSendPaused {
-        _setSendPauseStorage(NOT_PAUSED);
-        emit SendNotPaused();
-    }
     /**
      * @dev Returns true if the method is paused, and false otherwise.
      */

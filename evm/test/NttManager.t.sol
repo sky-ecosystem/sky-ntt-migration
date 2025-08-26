@@ -192,7 +192,7 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
     function test_pauseUnpause() public {
         assertEq(nttManager.isPaused(), false);
-        nttManager.pause();
+        nttManager.setPause(true, false);
         assertEq(nttManager.isPaused(), true);
 
         // When the NttManager is paused, initiating transfers, completing queued transfers on both source and destination chains,
@@ -231,7 +231,7 @@ contract TestNttManager is Test, IRateLimiterEvents {
         );
         dummyTransceiver.receiveMessage(transceiverMessage);
 
-        nttManager.unpause();
+        nttManager.setPause(false, false);
         assertEq(nttManager.isPaused(), false);
     }
 
@@ -243,18 +243,18 @@ contract TestNttManager is Test, IRateLimiterEvents {
         // execute from pauser context
         vm.startPrank(pauser);
         assertEq(nttManager.isPaused(), false);
-        nttManager.pause();
+        nttManager.setPause(true, false);
         assertEq(nttManager.isPaused(), true);
 
         vm.expectRevert(
-            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, pauser)
+            abi.encodeWithSelector(PausableUpgradeable.InvalidPauser.selector, pauser)
         );
-        nttManager.unpause();
+        nttManager.setPause(false, false);
 
         // execute from owner context
         // ensures that owner can still unpause
         vm.startPrank(address(this));
-        nttManager.unpause();
+        nttManager.setPause(false, false);
         assertEq(nttManager.isPaused(), false);
     }
 
@@ -1303,7 +1303,7 @@ contract TestNttManager is Test, IRateLimiterEvents {
         );
 
         vm.startPrank(nttManagerOther.owner());
-        nttManagerOther.pauseSend();
+        nttManagerOther.setPause(true, true);
         vm.stopPrank();
 
         e1.receiveMessage(transceiverMessage);
@@ -1325,9 +1325,8 @@ contract TestNttManager is Test, IRateLimiterEvents {
         );
 
         // Pause sending
-        vm.startPrank(nttManagerOther.owner());
-        nttManagerOther.pauseSend();
-        vm.stopPrank();
+        vm.prank(nttManagerOther.owner());
+        nttManagerOther.setPause(true, true);
 
         // Ensure sending is paused
         vm.expectRevert(
@@ -1342,9 +1341,8 @@ contract TestNttManager is Test, IRateLimiterEvents {
         nttManagerOther.transfer(0, 0, bytes32(0), bytes32(0), false, new bytes(1));
 
         // Pause everything
-        vm.startPrank(nttManagerOther.owner());
-        nttManagerOther.pause();
-        vm.stopPrank();
+        vm.prank(nttManagerOther.owner());
+        nttManagerOther.setPause(true, false);
 
         // Ensure everything is paused
         vm.expectRevert(
@@ -1393,7 +1391,7 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         // First pause sending
         vm.prank(nttManagerOther.owner());
-        nttManagerOther.pauseSend();
+        nttManagerOther.setPause(true, true);
 
         // Verify sending is paused
         assertEq(nttManagerOther.isSendPaused(), true);
@@ -1410,7 +1408,7 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         // Now unpause sending
         vm.prank(nttManagerOther.owner());
-        nttManagerOther.unpauseSend();
+        nttManagerOther.setPause(false, true);
 
         // Verify sending is unpaused
         assertEq(nttManagerOther.isSendPaused(), false);

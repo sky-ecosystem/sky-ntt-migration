@@ -166,8 +166,12 @@ interface IManagerBase {
         address newImplementation
     ) external;
 
-    /// @notice Pauses the manager.
-    function pause() external;
+    /**
+     * @dev Pauses the manager.
+     * @param pause Controls whether the function is paused.
+     * @param controlSendingOnly Controls whether only the sending functionality is paused.
+     */
+    function setPause(bool pause, bool controlSendingOnly) external;    
 
     /// @notice Returns the mode (locking or burning) of the NttManager.
     /// @return mode A uint8 corresponding to the mode
