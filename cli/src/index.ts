@@ -1259,7 +1259,7 @@ async function deploySolana<N extends Network, C extends SolanaChains>(
         }
 
         const anchorTomlPath = `${pwd}/solana/Anchor.toml`;
-        const libRsPath = `${pwd}/solana/programs/example-native-token-transfers/src/lib.rs`;
+        const libRsPath = `${pwd}/solana/programs/native-token-transfers/src/lib.rs`;
 
         const anchorToml = fs.readFileSync(anchorTomlPath).toString();
         const newAnchorToml = anchorToml.replace(existingProgramId, providedProgramId);
