@@ -28,20 +28,10 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         INttManager nttManagerProxy,
         DeploymentParams memory params
     ) internal {
-        // Deploy the Manager Implementation.
-        // NttManagerMigrateable implementation = new NttManagerMigrateable(
-        //     params.token,
-        //     params.mode,
-        //     params.wormholeChainId,
-        //     params.rateLimitDuration,
-        //     params.shouldSkipRatelimiter
-        // );
-
-        // console2.log("NttManager Implementation deployed at: ", address(implementation));
 
         // Upgrade the proxy.
         Upgrades.upgradeProxy(address(nttManagerProxy), "NttManagerMigrateable.sol", "", Options({
-            constructorData: abi.encodePacked(params.token, params.mode, params.wormholeChainId, params.rateLimitDuration, params.shouldSkipRatelimiter),
+            constructorData: abi.encode(params.token, params.mode, params.wormholeChainId, params.rateLimitDuration, params.shouldSkipRatelimiter),
             referenceContract: "",
             referenceBuildInfoDir: "",
             exclude: new string[](0),
@@ -66,9 +56,7 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
                 skipLicenseType: false,
                 metadata: ""
             })
-            
         }));
-        // nttManagerProxy.upgrade(address(implementation));
     }
 
     function run() public {

@@ -10,11 +10,13 @@ import "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Upgrade.sol";
 ///      the proxy (by disabling initializers in the constructor).
 ///      It also exposes a migrate function that is called during upgrades.
 abstract contract Implementation is Initializable, ERC1967Upgrade {
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address immutable _this;
 
     error OnlyDelegateCall();
     error NotMigrating();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
         _this = address(this);

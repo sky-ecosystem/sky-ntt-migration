@@ -12,6 +12,7 @@ abstract contract RateLimiter is IRateLimiter, IRateLimiterEvents {
     using TrimmedAmountLib for TrimmedAmount;
 
     /// @dev The duration (in seconds) it takes for the limits to fully replenish.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint64 public immutable rateLimitDuration;
 
     /// =============== STORAGE ===============================================
@@ -68,6 +69,7 @@ abstract contract RateLimiter is IRateLimiter, IRateLimiterEvents {
         }
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(uint64 _rateLimitDuration, bool _skipRateLimiting) {
         if (
             _rateLimitDuration == 0 && !_skipRateLimiting

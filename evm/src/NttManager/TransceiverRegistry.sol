@@ -10,6 +10,7 @@ pragma solidity >=0.8.8 <0.9.0;
 ///         2. The value set in the bitmap of trannsceivers
 ///            should directly correspond to the whether the transceiver is enabled
 abstract contract TransceiverRegistry {
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _checkTransceiversInvariants();
     }

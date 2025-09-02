@@ -47,6 +47,7 @@ contract NttManagerMigrateable is INttManager, RateLimiter, ManagerBase {
 
     // =============== Setup =================================================================
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address _token,
         Mode _mode,

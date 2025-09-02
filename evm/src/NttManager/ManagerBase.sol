@@ -26,22 +26,28 @@ abstract contract ManagerBase is
     // =============== Immutables ============================================================
 
     /// @dev Address of the token that this NTT Manager is tied to
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable token;
     /// @dev Contract deployer address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address immutable deployer;
     /// @dev Mode of the NTT Manager -- this is either LOCKING (Mode = 0) or BURNING (Mode = 1)
     /// In LOCKING mode, tokens are locked/unlocked by the NTT Manager contract when sending/redeeming cross-chain transfers.
     /// In BURNING mode, tokens are burned/minted by the NTT Manager contract when sending/redeeming cross-chain transfers.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     Mode public immutable mode;
     /// @dev Wormhole chain ID that the NTT Manager is deployed on.
     /// This chain ID is formatted Wormhole Chain IDs -- https://docs.wormhole.com/wormhole/reference/constants
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint16 public immutable chainId;
     /// @dev EVM chain ID that the NTT Manager is deployed on.
     /// This chain ID is formatted based on standardized chain IDs, e.g. Ethereum mainnet is 1, Sepolia is 11155111, etc.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint256 immutable evmChainId;
 
     // =============== Setup =================================================================
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _token, Mode _mode, uint16 _chainId) {
         token = _token;
         mode = _mode;
