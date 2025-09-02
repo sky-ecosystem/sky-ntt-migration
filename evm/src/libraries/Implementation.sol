@@ -62,6 +62,7 @@ abstract contract Implementation is Initializable, ERC1967Upgrade {
         _initialize();
     }
 
+    /// @custom:oz-upgrades-validate-as-initializer
     function migrate() external onlyDelegateCall reinitializer(_getInitializedVersion() + 1) {
         // NOTE: we add the reinitializer() modifier so that onlyInitializing
         // functions can be called inside

@@ -7,8 +7,11 @@ import "../src/interfaces/INttManager.sol";
 import "../src/interfaces/IManagerBase.sol";
 
 import {NttManager} from "../src/NttManager/NttManager.sol";
+import {NttManagerMigrateable} from "../src/NttManager/NttManagerMigrateable.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PausableUpgradeable} from "../src/libraries/PausableUpgradeable.sol";
+import { Upgrades } from "openzeppelin-foundry-upgrades/LegacyUpgrades.sol";
+import { DefenderOptions, Options, TxOverrides } from "openzeppelin-foundry-upgrades/Options.sol";
 
 import {ParseNttConfig} from "./helpers/ParseNttConfig.sol";
 
@@ -26,18 +29,46 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         DeploymentParams memory params
     ) internal {
         // Deploy the Manager Implementation.
-        NttManager implementation = new NttManager(
-            params.token,
-            params.mode,
-            params.wormholeChainId,
-            params.rateLimitDuration,
-            params.shouldSkipRatelimiter
-        );
+        // NttManagerMigrateable implementation = new NttManagerMigrateable(
+        //     params.token,
+        //     params.mode,
+        //     params.wormholeChainId,
+        //     params.rateLimitDuration,
+        //     params.shouldSkipRatelimiter
+        // );
 
-        console2.log("NttManager Implementation deployed at: ", address(implementation));
+        // console2.log("NttManager Implementation deployed at: ", address(implementation));
 
         // Upgrade the proxy.
-        nttManagerProxy.upgrade(address(implementation));
+        Upgrades.upgradeProxy(address(nttManagerProxy), "NttManagerMigrateable.sol", "", Options({
+            constructorData: abi.encodePacked(params.token, params.mode, params.wormholeChainId, params.rateLimitDuration, params.shouldSkipRatelimiter),
+            referenceContract: "",
+            referenceBuildInfoDir: "",
+            exclude: new string[](0),
+            unsafeAllow: "",
+            unsafeAllowRenames: false,
+            unsafeSkipProxyAdminCheck: false,
+            unsafeSkipStorageCheck: false,
+            unsafeSkipAllChecks: false,
+            defender: DefenderOptions({
+                txOverrides: TxOverrides({
+                    gasLimit: 0,
+                    gasPrice: 0,
+                    maxFeePerGas: 0,
+                    maxPriorityFeePerGas: 0
+                }),
+                useDefenderDeploy: false,
+                skipVerifySourceCode: false,
+                relayerId: "",
+                salt: "",
+                upgradeApprovalProcessId: "",
+                licenseType: "",
+                skipLicenseType: false,
+                metadata: ""
+            })
+            
+        }));
+        // nttManagerProxy.upgrade(address(implementation));
     }
 
     function run() public {

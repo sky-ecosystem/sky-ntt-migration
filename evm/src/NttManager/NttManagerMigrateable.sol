@@ -35,12 +35,14 @@ import {ManagerBase} from "./ManagerBase.sol";
 ///    to be too high, users will be refunded the difference.
 ///  - (optional) a flag to indicate whether the transfer should be queued
 ///    if the rate limit is exceeded
-contract NttManager is INttManager, RateLimiter, ManagerBase {
+/// @custom:oz-upgrades-from NttManager
+contract NttManagerMigrateable is INttManager, RateLimiter, ManagerBase {
     using BytesParsing for bytes;
     using SafeERC20 for IERC20;
     using TrimmedAmountLib for uint256;
     using TrimmedAmountLib for TrimmedAmount;
 
+    // @dev kept at 1.1.0 to avoid need to make changes to offchain code including NTT CLI
     string public constant NTT_MANAGER_VERSION = "1.1.0";
 
     // =============== Setup =================================================================
@@ -70,6 +72,10 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         __NttManager_init();
         _checkThresholdInvariants();
         _checkTransceiversInvariants();
+    }
+
+    function _migrate() internal virtual override {
+        __Paused_init2_unchained();
     }
 
     // =============== Storage ==============================================================
@@ -120,17 +126,11 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
             revert InvalidPeerSameChainId();
         }
 
-        NttManagerPeer memory oldPeer = _getPeersStorage()[peerChainId];
-
         _getPeersStorage()[peerChainId].peerAddress = peerContract;
         _getPeersStorage()[peerChainId].tokenDecimals = decimals;
 
         uint8 toDecimals = tokenDecimals();
         _setInboundLimit(inboundLimit.trim(toDecimals, toDecimals), peerChainId);
-
-        emit PeerUpdated(
-            peerChainId, oldPeer.peerAddress, oldPeer.tokenDecimals, peerContract, decimals
-        );
     }
 
     /// @inheritdoc INttManager
@@ -145,6 +145,11 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     function setInboundLimit(uint256 limit, uint16 chainId_) external onlyOwner {
         uint8 toDecimals = tokenDecimals();
         _setInboundLimit(limit.trim(toDecimals, toDecimals), chainId_);
+    }
+
+    function migrateLockedTokens(address recipient) external onlyOwner {
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransfer(recipient, balance);
     }
 
     /// ============== Invariants =============================================
@@ -162,7 +167,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         uint256 amount,
         uint16 recipientChain,
         bytes32 recipient
-    ) external payable nonReentrant whenNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
         return
             _transferEntryPoint(amount, recipientChain, recipient, recipient, false, new bytes(1));
     }
@@ -175,7 +180,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         bytes32 refundAddress,
         bool shouldQueue,
         bytes memory transceiverInstructions
-    ) external payable nonReentrant whenNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
         return _transferEntryPoint(
             amount, recipientChain, recipient, refundAddress, shouldQueue, transceiverInstructions
         );
@@ -269,7 +274,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     /// @inheritdoc INttManager
     function completeOutboundQueuedTransfer(
         uint64 messageSequence
-    ) external payable nonReentrant whenNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
         // find the message in the queue
         OutboundQueuedTransfer memory queuedTransfer = _getOutboundQueueStorage()[messageSequence];
         if (queuedTransfer.txTimestamp == 0) {

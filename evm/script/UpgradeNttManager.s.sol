@@ -7,6 +7,7 @@ import "../src/interfaces/INttManager.sol";
 import "../src/interfaces/IManagerBase.sol";
 
 import {NttManager} from "../src/NttManager/NttManager.sol";
+import {NttManagerMigrateable} from "../src/NttManager/NttManagerMigrateable.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PausableUpgradeable} from "../src/libraries/PausableUpgradeable.sol";
 
@@ -26,7 +27,7 @@ contract UpgradeNttManagerScript is ParseNttConfig {
         DeploymentParams memory params
     ) internal {
         // Deploy the Manager Implementation.
-        NttManager implementation = new NttManager(
+        NttManagerMigrateable implementation = new NttManagerMigrateable(
             params.token,
             params.mode,
             params.wormholeChainId,

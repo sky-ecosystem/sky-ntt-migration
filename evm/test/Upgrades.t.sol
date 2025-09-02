@@ -24,6 +24,7 @@ import "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "wormhole-solidity-sdk/interfaces/IWormhole.sol";
 import "wormhole-solidity-sdk/testing/helpers/WormholeSimulator.sol";
 import "wormhole-solidity-sdk/Utils.sol";
+import { Upgrades } from "openzeppelin-foundry-upgrades/LegacyUpgrades.sol";
 
 contract TestUpgrades is Test, IRateLimiterEvents {
     NttManager nttManagerChain1;
