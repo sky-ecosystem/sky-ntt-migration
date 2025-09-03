@@ -17,7 +17,6 @@ RUN apt update && apt install -y \
 
 # Copy SDK files first
 COPY package*.json ./
-COPY sdk/package*.json sdk/
 COPY sdk/ sdk/
 
 # Install tools in parallel where possible and cache them
@@ -29,9 +28,8 @@ RUN curl -L https://foundry.paradigm.xyz | bash && \
 FROM base as base-solana
 
 # Cache Rust/Cargo dependencies separately from source changes
-RUN cargo install --git https://github.com/coral-xyz/anchor avm --locked --force && \
-    avm install 0.29.0 && \
-    avm use 0.29.0
+# Install anchor-cli directly instead of using avm to avoid compilation issues
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
 
 FROM base as cli-remote
 # NOTE: when invoking the installer outside of the source tree, it clones the
