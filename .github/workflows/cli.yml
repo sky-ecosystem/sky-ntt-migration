@@ -8,13 +8,12 @@ on:
       - fix-workflow
 
 env:
-  # Global environment variables for consistent caching
+  # Enable Docker BuildKit for better performance
   DOCKER_BUILDKIT: 1
-  BUILDX_BUILDER: docker-container
 
 jobs:
   test-evm:
-    runs-on: ubuntu-latest  #ubuntu-latest-4-cores  # Use 4-core runners for better performance
+    runs-on: ubuntu-latest-4-cores  # Use 4-core runners for better performance
     timeout-minutes: 30  # Set explicit timeout
     steps:
       - name: Checkout repository
@@ -23,8 +22,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver: docker-container
-          use: true
+          # Use default driver to avoid setup issues
+          driver: docker
+          install: true
 
       - name: Build and test EVM CLI
         uses: docker/build-push-action@v5
@@ -32,16 +32,14 @@ jobs:
           context: .
           file: Dockerfile.cli
           target: cli-local-test
-          platforms: linux/amd64
+          load: false
           push: false
           cache-from: |
             type=gha,scope=evm-build
-            type=gha,scope=base-build
           cache-to: |
             type=gha,mode=max,scope=evm-build
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          outputs: type=cacheonly
 
   test-solana:
     runs-on: tilt-kube-public
@@ -53,8 +51,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver: docker-container
-          use: true
+          # Use default driver to avoid setup issues
+          driver: docker
+          install: true
 
       - name: Build and test Solana CLI
         uses: docker/build-push-action@v5
@@ -62,25 +61,11 @@ jobs:
           context: .
           file: Dockerfile.cli
           target: cli-local-test-solana
-          platforms: linux/amd64
+          load: false
           push: false
           cache-from: |
             type=gha,scope=solana-build
-            type=gha,scope=base-solana-build
-            type=gha,scope=base-build
           cache-to: |
             type=gha,mode=max,scope=solana-build
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          outputs: type=cacheonly
-
-  # Optional: Cleanup old cache entries to prevent storage bloat
-  cleanup-cache:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/fix-workflow'
-    needs: [test-evm, test-solana]
-    steps:
-      - name: Cleanup old cache entries
-        run: |
-          # GitHub automatically manages cache cleanup, but you can add custom logic here
-          echo "Cache cleanup completed"
