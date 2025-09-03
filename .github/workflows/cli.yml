@@ -22,8 +22,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # Use default driver to avoid setup issues
-          driver: docker
+          driver: docker-container
           install: true
 
       - name: Build and test EVM CLI
@@ -51,8 +50,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # Use default driver to avoid setup issues
-          driver: docker
+          driver: docker-container
           install: true
 
       - name: Build and test Solana CLI
