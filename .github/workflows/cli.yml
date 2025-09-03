@@ -31,7 +31,7 @@ jobs:
           context: .
           file: Dockerfile.cli
           target: cli-local-test
-          load: false
+          load: true
           push: false
           cache-from: |
             type=gha,scope=evm-build
@@ -59,7 +59,7 @@ jobs:
           context: .
           file: Dockerfile.cli
           target: cli-local-test-solana
-          load: false
+          load: true
           push: false
           cache-from: |
             type=gha,scope=solana-build
