@@ -5,7 +5,7 @@ on:
   pull_request:
   push:
     branches:
-      - fix-workflow
+      - main
 
 env:
   # Enable Docker BuildKit for better performance
