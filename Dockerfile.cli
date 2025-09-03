@@ -15,10 +15,6 @@ RUN apt update && apt install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt clean
 
-# Copy SDK files first
-COPY package*.json ./
-COPY sdk/ sdk/
-
 # Install tools in parallel where possible and cache them
 RUN curl -fsSL https://bun.sh/install | bash
 
@@ -28,8 +24,9 @@ RUN curl -L https://foundry.paradigm.xyz | bash && \
 FROM base as base-solana
 
 # Cache Rust/Cargo dependencies separately from source changes
-# Install anchor-cli directly instead of using avm to avoid compilation issues
-RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 avm --locked --force
+RUN avm install 0.29.0
+RUN avm use 0.29.0
 
 FROM base as cli-remote
 # NOTE: when invoking the installer outside of the source tree, it clones the
@@ -40,7 +37,9 @@ RUN bash -ci "./cli/install.sh"
 RUN bash -ci "which ntt"
 
 FROM base-solana as cli-local
-
+# NOTE: when invoking the installer inside of the source tree, it installs from
+# the local source tree.
+# This build stage tests that path.
 WORKDIR /app
 
 # Copy package files first for better layer caching
@@ -82,6 +81,7 @@ FROM cli-local as cli-local-test-solana
 
 # Copy test files and remaining source  
 COPY cli/test cli/test
+# evm/script needed for the cli, at least for now
 COPY evm/script evm/script
 COPY solana solana
 
