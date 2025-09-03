@@ -48,7 +48,6 @@ WORKDIR /app
 # Copy package files first for better layer caching
 # This allows npm/cargo dependencies to be cached even when source code changes
 COPY package.json package-lock.json tsconfig*.json ./
-COPY sdk/package.json sdk/
 COPY solana/package.json solana/
 COPY evm/ts/package.json evm/ts/
 COPY cli/package.json cli/package-lock.json cli/
