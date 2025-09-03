@@ -53,16 +53,12 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         console2.log("before upgrade");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
 
-        vm.expectRevert();
-        nttManager.isSendPaused();
-
         vm.startPrank(nttManager.owner());
         upgradeNttManager(nttManager, params);
         vm.stopPrank();
 
         console2.log("after upgrade");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
-        console2.log("Is NttManager send paused: ", nttManager.isSendPaused());
 
         // simulate a transfer from account that has balance
         vm.deal(address(nttManager), 1 ether);
@@ -72,18 +68,16 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         vm.stopPrank();
 
         vm.startPrank(nttManager.owner());
-        nttManager.setPause(true, true);
+        nttManager.pause();
         vm.stopPrank();
 
         console2.log("after pauseSend");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
-        console2.log("Is NttManager send paused: ", nttManager.isSendPaused());
 
         // try transfer again but this time it should revert because the send is paused
         vm.startPrank(address(nttManager));
-        (, totalPriceQuote) = nttManager.quoteDeliveryPrice(1, new bytes(1));
-        vm.expectRevert(PausableUpgradeable.RequireContractSendIsNotPaused.selector);
-        nttManager.transfer{value: totalPriceQuote}(1 ether, 1, 0x000000000000000000000000000000000000000000000000000000000000dead);
+        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
+        nttManager.transfer{value: 1}(1 ether, 1, 0x000000000000000000000000000000000000000000000000000000000000dead);
         vm.stopPrank();
     }
 }

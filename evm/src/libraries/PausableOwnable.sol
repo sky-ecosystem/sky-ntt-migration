@@ -37,6 +37,8 @@ abstract contract PausableOwnable is PausableUpgradeable, OwnableUpgradeable {
         address newPauser
     ) public virtual onlyOwnerOrPauser {
         PauserStorage storage $ = _getPauserStorage();
+        address oldPauser = $._pauser;
         $._pauser = newPauser;
+        emit PauserTransferred(oldPauser, newPauser);
     }
 }

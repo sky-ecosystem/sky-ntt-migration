@@ -73,10 +73,6 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         _checkTransceiversInvariants();
     }
 
-    function _migrate() internal virtual override {
-        __Paused_init2_unchained();
-    }
-
     // =============== Storage ==============================================================
 
     bytes32 private constant PEERS_SLOT = bytes32(uint256(keccak256("ntt.peers")) - 1);
@@ -125,11 +121,17 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
             revert InvalidPeerSameChainId();
         }
 
+        NttManagerPeer memory oldPeer = _getPeersStorage()[peerChainId];
+
         _getPeersStorage()[peerChainId].peerAddress = peerContract;
         _getPeersStorage()[peerChainId].tokenDecimals = decimals;
 
         uint8 toDecimals = tokenDecimals();
         _setInboundLimit(inboundLimit.trim(toDecimals, toDecimals), peerChainId);
+
+        emit PeerUpdated(
+            peerChainId, oldPeer.peerAddress, oldPeer.tokenDecimals, peerContract, decimals
+        );
     }
 
     /// @inheritdoc INttManager
@@ -162,27 +164,13 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     // ==================== External Interface ===============================================
 
     /// @inheritdoc INttManager
-    function transfer(
-        uint256 amount,
-        uint16 recipientChain,
-        bytes32 recipient
-    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
-        return
-            _transferEntryPoint(amount, recipientChain, recipient, recipient, false, new bytes(1));
+    function transfer(uint256,uint16,bytes32) external payable returns (uint64) {
+        revert TransfersPermanentlyDisabled();
     }
 
     /// @inheritdoc INttManager
-    function transfer(
-        uint256 amount,
-        uint16 recipientChain,
-        bytes32 recipient,
-        bytes32 refundAddress,
-        bool shouldQueue,
-        bytes memory transceiverInstructions
-    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
-        return _transferEntryPoint(
-            amount, recipientChain, recipient, refundAddress, shouldQueue, transceiverInstructions
-        );
+    function transfer(uint256,uint16,bytes32,bytes32,bool,bytes memory) external payable returns (uint64) {
+        revert TransfersPermanentlyDisabled();
     }
 
     /// @inheritdoc INttManager
@@ -273,7 +261,7 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     /// @inheritdoc INttManager
     function completeOutboundQueuedTransfer(
         uint64 messageSequence
-    ) external payable nonReentrant whenNotPaused whenSendNotPaused returns (uint64) {
+    ) external payable nonReentrant whenNotPaused returns (uint64) {
         // find the message in the queue
         OutboundQueuedTransfer memory queuedTransfer = _getOutboundQueueStorage()[messageSequence];
         if (queuedTransfer.txTimestamp == 0) {
@@ -325,122 +313,6 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     }
 
     // ==================== Internal Business Logic =========================================
-
-    function _transferEntryPoint(
-        uint256 amount,
-        uint16 recipientChain,
-        bytes32 recipient,
-        bytes32 refundAddress,
-        bool shouldQueue,
-        bytes memory transceiverInstructions
-    ) internal returns (uint64) {
-        if (amount == 0) {
-            revert ZeroAmount();
-        }
-
-        if (recipient == bytes32(0)) {
-            revert InvalidRecipient();
-        }
-
-        if (refundAddress == bytes32(0)) {
-            revert InvalidRefundAddress();
-        }
-
-        {
-            // Lock/burn tokens before checking rate limits
-            // use transferFrom to pull tokens from the user and lock them
-            // query own token balance before transfer
-            uint256 balanceBefore = _getTokenBalanceOf(token, address(this));
-
-            // transfer tokens
-            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-
-            // query own token balance after transfer
-            uint256 balanceAfter = _getTokenBalanceOf(token, address(this));
-
-            // correct amount for potential transfer fees
-            amount = balanceAfter - balanceBefore;
-            if (mode == Mode.BURNING) {
-                {
-                    // NOTE: We don't account for burn fees in this code path.
-                    // We verify that the user's change in balance is equal to the amount that's burned.
-                    // Accounting for burn fees can be non-trivial, since there
-                    // is no standard way to account for the fee if the fee amount
-                    // is taken out of the burn amount.
-                    // For example, if there's a fee of 1 which is taken out of the
-                    // amount, then burning 20 tokens would result in a transfer of only 19 tokens.
-                    // However, the difference in the user's balance would only show 20.
-                    // Since there is no standard way to query for burn fee amounts with burnable tokens,
-                    // and NTT would be used on a per-token basis, implementing this functionality
-                    // is left to integrating projects who may need to account for burn fees on their tokens.
-                    ERC20Burnable(token).burn(amount);
-
-                    // tokens held by the contract after the operation should be the same as before
-                    uint256 balanceAfterBurn = _getTokenBalanceOf(token, address(this));
-                    if (balanceBefore != balanceAfterBurn) {
-                        revert BurnAmountDifferentThanBalanceDiff(balanceBefore, balanceAfterBurn);
-                    }
-                }
-            }
-        }
-
-        // trim amount after burning to ensure transfer amount matches (amount - fee)
-        TrimmedAmount trimmedAmount = _trimTransferAmount(amount, recipientChain);
-        TrimmedAmount internalAmount = trimmedAmount.shift(tokenDecimals());
-
-        // get the sequence for this transfer
-        uint64 sequence = _useMessageSequence();
-
-        {
-            // now check rate limits
-            bool isAmountRateLimited = _isOutboundAmountRateLimited(internalAmount);
-            if (!shouldQueue && isAmountRateLimited) {
-                revert NotEnoughCapacity(getCurrentOutboundCapacity(), amount);
-            }
-            if (shouldQueue && isAmountRateLimited) {
-                // verify chain has not forked
-                checkFork(evmChainId);
-
-                // emit an event to notify the user that the transfer is rate limited
-                emit OutboundTransferRateLimited(
-                    msg.sender, sequence, amount, getCurrentOutboundCapacity()
-                );
-
-                // queue up and return
-                _enqueueOutboundTransfer(
-                    sequence,
-                    trimmedAmount,
-                    recipientChain,
-                    recipient,
-                    refundAddress,
-                    msg.sender,
-                    transceiverInstructions
-                );
-
-                // refund price quote back to sender
-                _refundToSender(msg.value);
-
-                // return the sequence in the queue
-                return sequence;
-            }
-        }
-
-        // otherwise, consume the outbound amount
-        _consumeOutboundAmount(internalAmount);
-        // When sending a transfer, we refill the inbound rate limit for
-        // that chain by the same amount (we call this "backflow")
-        _backfillInboundAmount(internalAmount, recipientChain);
-
-        return _transfer(
-            sequence,
-            trimmedAmount,
-            recipientChain,
-            recipient,
-            refundAddress,
-            msg.sender,
-            transceiverInstructions
-        );
-    }
 
     function _transfer(
         uint64 sequence,

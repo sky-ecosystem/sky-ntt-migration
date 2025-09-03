@@ -327,12 +327,12 @@ abstract contract ManagerBase is
     }
 
     /// @inheritdoc IManagerBase
-    function setPause(bool pause, bool controlSendingOnly) public {
-        if (owner() != msg.sender && !(pauser() == msg.sender && pause)) {
-            revert InvalidPauser(msg.sender);
-        }
+    function pause() public onlyOwnerOrPauser {
+        _pause();
+    }
 
-        _setPause(pause, controlSendingOnly);
+    function unpause() public onlyOwner {
+        _unpause();
     }
 
     /// @notice Transfer ownership of the Manager contract and all Transceiver contracts to a new owner.

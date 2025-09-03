@@ -53,15 +53,11 @@ contract UpgradeNttManagerScript is ParseNttConfig {
         console2.log("before upgrade");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
 
-        vm.expectRevert();
-        nttManager.isSendPaused();
-
         vm.startBroadcast();
         upgradeNttManager(nttManager, params);
         vm.stopBroadcast();
 
         console2.log("after upgrade");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
-        console2.log("Is NttManager send paused: ", nttManager.isSendPaused());
     }
 }

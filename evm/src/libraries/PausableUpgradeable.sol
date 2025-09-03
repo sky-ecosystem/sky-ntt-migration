@@ -24,13 +24,14 @@ abstract contract PausableUpgradeable is Initializable {
     // @dev Storage slot with the pause flag, this is managed by the `PauseStorage` struct
     struct PauseStorage {
         uint256 _pauseFlag;
-        uint256 _sendPausedFlag;
     }
 
     /// NOTE: use uint256 to save on gas because it is the native word size of the EVM
     /// it is cheaper than using a bool because modifying a boolean value requires an extra SLOAD
     uint256 private constant NOT_PAUSED = 1;
     uint256 private constant PAUSED = 2;
+
+    event PauserTransferred(address indexed oldPauser, address indexed newPauser);
 
     /**
      * @dev Contract is not paused, functionality is unblocked
@@ -42,20 +43,14 @@ abstract contract PausableUpgradeable is Initializable {
     error RequireContractIsPaused();
 
     /**
-     * @dev Contract send is not paused, functionality is unblocked
-     */
-    error RequireContractSendIsNotPaused();
-
-    /** 
-     * @dev Contract send is paused, blocking
-     */
-    error RequireContractSendIsPaused();
-
-    /**
      * @dev the pauser is not a valid pauser account (e.g. `address(0)`)
      */
     error InvalidPauser(address account);
-    
+
+    // @dev Emitted when the contract is paused
+    event Paused(bool paused);
+    event NotPaused(bool notPaused);
+
     bytes32 private constant PAUSE_SLOT = bytes32(uint256(keccak256("Pause.pauseFlag")) - 1);
     bytes32 private constant PAUSER_ROLE_SLOT = bytes32(uint256(keccak256("Pause.pauseRole")) - 1);
 
@@ -86,12 +81,6 @@ abstract contract PausableUpgradeable is Initializable {
         _getPauseStorage()._pauseFlag = pauseFlag;
     }
 
-    function _setSendPauseStorage(
-        uint256 sendPauseFlag
-    ) internal {
-        _getPauseStorage()._sendPausedFlag = sendPauseFlag;
-    }
-
     function __Paused_init(
         address initialPauser
     ) internal onlyInitializing {
@@ -108,12 +97,6 @@ abstract contract PausableUpgradeable is Initializable {
         // set the initial pauser
         PauserStorage storage $_role = _getPauserStorage();
         $_role._pauser = initialPauser;
-    }
-
-    function __Paused_init2_unchained() internal onlyInitializing {
-        // set send pause flag to false initially
-        PauseStorage storage $ = _getPauseStorage();
-        $._sendPausedFlag = NOT_PAUSED;
     }
 
     /**
@@ -138,20 +121,6 @@ abstract contract PausableUpgradeable is Initializable {
         _;
     }
 
-    modifier whenSendNotPaused() {
-        if (isSendPaused()) {
-            revert RequireContractSendIsNotPaused();
-        }
-        _;
-    }
-
-    modifier whenSendPaused() {
-        if (!isSendPaused()) {
-            revert RequireContractSendIsPaused();
-        }
-        _;
-    }
-
     /*
      * @dev Modifier to allow only the Pauser to access pausing functionality
      */
@@ -169,12 +138,22 @@ abstract contract PausableUpgradeable is Initializable {
         }
     }
 
-    function _setPause(bool pause, bool controlSendingOnly) internal virtual {
-        if (controlSendingOnly) {
-            _setSendPauseStorage(pause ? PAUSED : NOT_PAUSED);
-        } else {
-            _setPauseStorage(pause ? PAUSED : NOT_PAUSED);
-        }
+    /**
+     * @dev pauses the function and emits the `Paused` event
+     */
+    function _pause() internal virtual whenNotPaused {
+        // this can only be set to PAUSED when the state is NOTPAUSED
+        _setPauseStorage(PAUSED);
+        emit Paused(true);
+    }
+
+    /**
+     * @dev unpauses the function
+     */
+    function _unpause() internal virtual whenPaused {
+        // this can only be set to NOTPAUSED when the state is PAUSED
+        _setPauseStorage(NOT_PAUSED);
+        emit NotPaused(false);
     }
 
     /**
@@ -183,10 +162,5 @@ abstract contract PausableUpgradeable is Initializable {
     function isPaused() public view returns (bool) {
         PauseStorage storage $ = _getPauseStorage();
         return $._pauseFlag == PAUSED;
-    }
-
-    function isSendPaused() public view returns (bool) {
-        PauseStorage storage $ = _getPauseStorage();
-        return $._sendPausedFlag == PAUSED;
     }
 }
