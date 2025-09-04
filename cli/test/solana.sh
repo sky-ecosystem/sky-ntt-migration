@@ -189,18 +189,20 @@ echo "Authority: $authority"
 spl-token authorize "$token" mint "$authority" -u "$NETWORK"
 
 # Add chain and upgrade
+# Store absolute path to deployment file before changing directories
+DEPLOYMENT_FILE_ABS=$(realpath "$DEPLOYMENT_FILE")
 # Change to project root to ensure CLI can find source files
 cd /app
-ntt add-chain Solana --ver 1.0.0 --mode burning --token "$token" --payer "$keypair" --program-key "$ntt_keypair"
+ntt add-chain Solana --ver 1.0.0 --mode burning --token "$token" --payer "$keypair" --program-key "$ntt_keypair" --path "$DEPLOYMENT_FILE_ABS"
 
 echo "Getting status"
-ntt status || true
+ntt status --path "$DEPLOYMENT_FILE_ABS" || true
 
 solana program extend "$ntt_keypair_without_json" 100000 -u "$NETWORK"
-ntt upgrade Solana --ver 2.0.0 --payer "$keypair" --program-key "$ntt_keypair" --yes
-ntt status || true
+ntt upgrade Solana --ver 2.0.0 --payer "$keypair" --program-key "$ntt_keypair" --yes --path "$DEPLOYMENT_FILE_ABS"
+ntt status --path "$DEPLOYMENT_FILE_ABS" || true
 
-ntt push --payer "$keypair" --yes
+ntt push --payer "$keypair" --yes --path "$DEPLOYMENT_FILE_ABS"
 
 cat "$DEPLOYMENT_FILE"
 
