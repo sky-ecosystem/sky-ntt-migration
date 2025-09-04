@@ -9,7 +9,7 @@ on:
 
 jobs:
   tilt:
-    runs-on: tilt-kube-public
+    runs-on: ubuntu-latest
 
     # Cancel previous builds on the same branch/ref. Full runs are expensive
     # and capacity is limited, so we want to avoid running multiple builds

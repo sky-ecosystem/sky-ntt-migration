@@ -41,7 +41,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
   test-solana:
-    runs-on: tilt-kube-public
+    runs-on: ubuntu-latest
     timeout-minutes: 45  # Solana builds take longer
     steps:
       - name: Checkout repository

@@ -14,7 +14,7 @@ defaults:
 jobs:
   solana-sbf:
     name: Solana Cargo SBF
-    runs-on: tilt-kube-public
+    runs-on: ubuntu-latest
     env:
       RUSTFLAGS: -Dwarnings
     steps:
