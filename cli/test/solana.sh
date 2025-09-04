@@ -189,7 +189,7 @@ echo "Authority: $authority"
 spl-token authorize "$token" mint "$authority" -u "$NETWORK"
 
 # Add chain and upgrade
-ntt add-chain Solana --ver 1.0.0 --mode burning --token "$token" --payer "$keypair" --program-key "$ntt_keypair"
+ntt add-chain Solana --local --mode burning --token "$token" --payer "$keypair" --program-key "$ntt_keypair"
 
 echo "Getting status"
 ntt status || true
