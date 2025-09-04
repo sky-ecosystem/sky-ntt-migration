@@ -18,6 +18,9 @@ RUN apt update && apt install -y \
 # Install tools in parallel where possible and cache them
 RUN curl -fsSL https://bun.sh/install | bash
 
+# Add bun to PATH for all subsequent layers
+ENV PATH="/root/.bun/bin:$PATH"
+
 RUN curl -L https://foundry.paradigm.xyz | bash && \
     bash -ci "foundryup"
 
@@ -55,13 +58,18 @@ RUN npm ci --prefer-offline --no-audit
 # Copy source code after dependencies are installed
 COPY sdk sdk
 COPY solana/ts solana/ts
+COPY solana/programs solana/programs
+COPY solana/Anchor.toml solana/
 COPY solana/tsconfig*.json solana/
 COPY evm/ts evm/ts
+COPY evm/foundry.toml evm/
+COPY evm/script evm/script
 COPY cli/src cli/src
 COPY cli/install.sh cli/install.sh
 
 # Install CLI tools
 RUN bash -ci "./cli/install.sh"
+# Verify ntt CLI is accessible
 RUN bash -ci "which ntt"
 
 FROM cli-local as cli-local-test
