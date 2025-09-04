@@ -189,13 +189,15 @@ echo "Authority: $authority"
 spl-token authorize "$token" mint "$authority" -u "$NETWORK"
 
 # Add chain and upgrade
-echo "y" | ntt add-chain Solana --local --mode burning --token "$token" --payer "$keypair" --program-key "$ntt_keypair" --yes
+# Change to project root to ensure CLI can find source files
+cd /app
+ntt add-chain Solana --ver 1.0.0 --mode burning --token "$token" --payer "$keypair" --program-key "$ntt_keypair"
 
 echo "Getting status"
 ntt status || true
 
 solana program extend "$ntt_keypair_without_json" 100000 -u "$NETWORK"
-ntt upgrade Solana --local --payer "$keypair" --program-key "$ntt_keypair" --yes
+ntt upgrade Solana --ver 2.0.0 --payer "$keypair" --program-key "$ntt_keypair" --yes
 ntt status || true
 
 ntt push --payer "$keypair" --yes
