@@ -195,7 +195,7 @@ echo "Getting status"
 ntt status || true
 
 solana program extend "$ntt_keypair_without_json" 100000 -u "$NETWORK"
-ntt upgrade Solana --ver 2.0.0 --payer "$keypair" --program-key "$ntt_keypair" --yes
+ntt upgrade Solana --local --payer "$keypair" --program-key "$ntt_keypair" --yes
 ntt status || true
 
 ntt push --payer "$keypair" --yes
