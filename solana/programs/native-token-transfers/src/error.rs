@@ -53,8 +53,6 @@ pub enum NTTError {
     BitmapIndexOutOfBounds,
     #[msg("NoRegisteredTransceivers")]
     NoRegisteredTransceivers,
-    #[msg("QueueNotAvailable")]
-    QueueNotAvailable,
 }
 
 impl From<ScalingError> for NTTError {
