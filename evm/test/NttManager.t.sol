@@ -760,9 +760,7 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         token.approve(address(nttManager), 3 * 10 ** decimals);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
         nttManager.transfer(
             1 * 10 ** decimals,
             chainId2,
@@ -784,7 +782,9 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         vm.startPrank(address(0x123));
         vm.expectRevert(
-            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(0x123))
+            abi.encodeWithSelector(
+                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(0x123)
+            )
         );
         nttManager.migrateLockedTokens(tokenReceiver);
         vm.stopPrank();

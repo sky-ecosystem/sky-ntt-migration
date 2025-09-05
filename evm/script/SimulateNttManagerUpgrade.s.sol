@@ -64,7 +64,9 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         vm.deal(address(nttManager), 1 ether);
         vm.startPrank(address(nttManager));
         vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        nttManager.transfer{value: 1}(1 ether, 1, 0x000000000000000000000000000000000000000000000000000000000000dead);
+        nttManager.transfer{value: 1}(
+            1 ether, 1, 0x000000000000000000000000000000000000000000000000000000000000dead
+        );
         vm.stopPrank();
         console2.log("transfer() correctly reverts on upgraded NTTManager");
 

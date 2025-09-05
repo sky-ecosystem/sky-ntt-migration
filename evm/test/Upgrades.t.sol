@@ -452,7 +452,9 @@ contract TestUpgrades is Test, IRateLimiterEvents {
             uint256 nttManagerBalanceBefore = token1.balanceOf(address(nttManagerChain1));
             uint256 userBalanceBefore = token1.balanceOf(address(userA));
             bytes memory instruction = encodeTransceiverInstruction(true);
-            vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
+            vm.expectRevert(
+                abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector)
+            );
             nttManagerChain1.transfer{value: totalQuote}(
                 sendingAmount,
                 chainId2,
@@ -466,13 +468,9 @@ contract TestUpgrades is Test, IRateLimiterEvents {
             uint256 nttManagerBalanceAfter = token1.balanceOf(address(nttManagerChain1));
             uint256 userBalanceAfter = token1.balanceOf(address(userA));
             require(
-                nttManagerBalanceBefore == nttManagerBalanceAfter,
-                "Should not change the tokens"
+                nttManagerBalanceBefore == nttManagerBalanceAfter, "Should not change the tokens"
             );
-            require(
-                userBalanceBefore == userBalanceAfter,
-                "User should not have sent tokens"
-            );
+            require(userBalanceBefore == userBalanceAfter, "User should not have sent tokens");
         }
 
         vm.stopPrank();

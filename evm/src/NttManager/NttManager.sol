@@ -148,7 +148,9 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
         _setInboundLimit(limit.trim(toDecimals, toDecimals), chainId_);
     }
 
-    function migrateLockedTokens(address recipient) external onlyOwner {
+    function migrateLockedTokens(
+        address recipient
+    ) external onlyOwner {
         uint256 balance = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransfer(recipient, balance);
     }
@@ -164,12 +166,19 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     // ==================== External Interface ===============================================
 
     /// @inheritdoc INttManager
-    function transfer(uint256,uint16,bytes32) external payable returns (uint64) {
+    function transfer(uint256, uint16, bytes32) external payable returns (uint64) {
         revert TransfersPermanentlyDisabled();
     }
 
     /// @inheritdoc INttManager
-    function transfer(uint256,uint16,bytes32,bytes32,bool,bytes memory) external payable returns (uint64) {
+    function transfer(
+        uint256,
+        uint16,
+        bytes32,
+        bytes32,
+        bool,
+        bytes memory
+    ) external payable returns (uint64) {
         revert TransfersPermanentlyDisabled();
     }
 
