@@ -26,11 +26,15 @@ use transceivers::wormhole::instructions::*;
 
 use instructions::*;
 
-#[cfg(feature = "token-sky")]
-declare_id!("STTZMMZhaytNtyHshzZ8HAgJoTVWhwrKFG7qk7xtSst");
-
-#[cfg(feature = "token-usds")]
-declare_id!("STTUVCMPuNbk21y1J6nqEGXSQ8HKvFmFBKnCvKHTrWn");
+cfg_if::cfg_if! {
+    if #[cfg(feature = "token-sky")] {
+        declare_id!("STTZMMZhaytNtyHshzZ8HAgJoTVWhwrKFG7qk7xtSst");
+    } else if #[cfg(feature = "token-usds")] {
+        declare_id!("STTUVCMPuNbk21y1J6nqEGXSQ8HKvFmFBKnCvKHTrWn");
+    } else {
+        declare_id!("nttiK1SepaQt6sZ4WGW5whvc9tEnGXGxuKeptcQPCcS");
+    }
+}
 
 pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
 

@@ -297,32 +297,13 @@ describe("example-native-token-transfers", () => {
         { queue: false, automatic: false, gasDropoff: 0n },
         outboxItem
       );
-      await signSendWait(ctx, xferTxs, signer);
-
-      const wormholeMessage = ntt.pdas.wormholeMessageAccount(
-        outboxItem.publicKey
-      );
-
-      const unsignedVaa = await coreBridge.parsePostMessageAccount(
-        wormholeMessage
-      );
-
-      const transceiverMessage = deserializePayload(
-        "Ntt:WormholeTransfer",
-        unsignedVaa.payload
-      );
-
-      // assert that amount is what we expect
-      expect(
-        transceiverMessage.nttManagerPayload.payload.trimmedAmount
-      ).toMatchObject({ amount: 10000n, decimals: 8 });
-
-      // get from balance
-      const balance = await connection.getTokenAccountBalance(tokenAccount);
-      expect(balance.value.amount).toBe("9900000");
+      await expect(ssw(ctx as ChainContext<any, any, any>, xferTxs, signer)).rejects.toThrow("Not implemented");
     });
 
     it("Can receive tokens", async () => {
+      let balance = await connection.getTokenAccountBalance(tokenAccount);
+      expect(balance.value.amount).toBe("10000000");
+
       const emitter = new testing.mocks.MockEmitter(
         remoteXcvr.address as UniversalAddress,
         "Ethereum",
@@ -354,12 +335,12 @@ describe("example-native-token-transfers", () => {
       } as const;
 
       const serialized = serializePayload(
-        "Ntt:WormholeTransfer",
+        "Ntt:WormholeTransfer" as any,
         sendingTransceiverMessage
       );
       const published = emitter.publishMessage(0, serialized, 200);
       const rawVaa = guardians.addSignatures(published, [0]);
-      const vaa = deserialize("Ntt:WormholeTransfer", serialize(rawVaa));
+      const vaa = deserialize("Ntt:WormholeTransfer" as any, serialize(rawVaa));
 
       const redeemTxs = ntt.redeem([vaa], sender);
       try {
@@ -369,8 +350,10 @@ describe("example-native-token-transfers", () => {
         throw e;
       }
 
-      // expect(released).toEqual(true);
-      expect((await counterValue()).toString()).toEqual("2");
+      expect((await counterValue()).toString()).toEqual("1");
+
+      balance = await connection.getTokenAccountBalance(tokenAccount);
+      expect(balance.value.amount).toBe("10100000");
     });
   });
 

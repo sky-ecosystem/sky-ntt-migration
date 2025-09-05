@@ -213,105 +213,6 @@ export type ExampleNativeTokenTransfers = {
       "returns": "string"
     },
     {
-      "name": "transferBurn",
-      "accounts": [
-        {
-          "name": "common",
-          "accounts": [
-            {
-              "name": "payer",
-              "isMut": true,
-              "isSigner": true
-            },
-            {
-              "name": "config",
-              "accounts": [
-                {
-                  "name": "config",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "mint",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "from",
-              "isMut": true,
-              "isSigner": false,
-              "docs": [
-                "account can spend these tokens."
-              ]
-            },
-            {
-              "name": "tokenProgram",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "outboxItem",
-              "isMut": true,
-              "isSigner": true
-            },
-            {
-              "name": "outboxRateLimit",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "custody",
-              "isMut": true,
-              "isSigner": false,
-              "docs": [
-                "Tokens are always transferred to the custody account first regardless of",
-                "the mode.",
-                "For an explanation, see the note in [`transfer_burn`]."
-              ]
-            },
-            {
-              "name": "systemProgram",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
-        },
-        {
-          "name": "inboxRateLimit",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "peer",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "sessionAuthority",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "See [`crate::SESSION_AUTHORITY_SEED`] for an explanation of the flow."
-          ]
-        },
-        {
-          "name": "tokenAuthority",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "args",
-          "type": {
-            "defined": "TransferArgs"
-          }
-        }
-      ]
-    },
-    {
       "name": "transferLock",
       "accounts": [
         {
@@ -366,8 +267,7 @@ export type ExampleNativeTokenTransfers = {
               "isSigner": false,
               "docs": [
                 "Tokens are always transferred to the custody account first regardless of",
-                "the mode.",
-                "For an explanation, see the note in [`transfer_burn`]."
+                "the mode."
               ]
             },
             {
@@ -1171,21 +1071,13 @@ export type ExampleNativeTokenTransfers = {
         },
         {
           "name": "config",
-          "accounts": [
-            {
-              "name": "config",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "tokenAuthority",
           "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "CHECK The seeds constraint ensures that this is the correct address"
-          ]
+          "isSigner": false
         },
         {
           "name": "mint",
@@ -2230,105 +2122,6 @@ export const IDL: ExampleNativeTokenTransfers = {
       "returns": "string"
     },
     {
-      "name": "transferBurn",
-      "accounts": [
-        {
-          "name": "common",
-          "accounts": [
-            {
-              "name": "payer",
-              "isMut": true,
-              "isSigner": true
-            },
-            {
-              "name": "config",
-              "accounts": [
-                {
-                  "name": "config",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "mint",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "from",
-              "isMut": true,
-              "isSigner": false,
-              "docs": [
-                "account can spend these tokens."
-              ]
-            },
-            {
-              "name": "tokenProgram",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "outboxItem",
-              "isMut": true,
-              "isSigner": true
-            },
-            {
-              "name": "outboxRateLimit",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "custody",
-              "isMut": true,
-              "isSigner": false,
-              "docs": [
-                "Tokens are always transferred to the custody account first regardless of",
-                "the mode.",
-                "For an explanation, see the note in [`transfer_burn`]."
-              ]
-            },
-            {
-              "name": "systemProgram",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
-        },
-        {
-          "name": "inboxRateLimit",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "peer",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "sessionAuthority",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "See [`crate::SESSION_AUTHORITY_SEED`] for an explanation of the flow."
-          ]
-        },
-        {
-          "name": "tokenAuthority",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "args",
-          "type": {
-            "defined": "TransferArgs"
-          }
-        }
-      ]
-    },
-    {
       "name": "transferLock",
       "accounts": [
         {
@@ -2383,8 +2176,7 @@ export const IDL: ExampleNativeTokenTransfers = {
               "isSigner": false,
               "docs": [
                 "Tokens are always transferred to the custody account first regardless of",
-                "the mode.",
-                "For an explanation, see the note in [`transfer_burn`]."
+                "the mode."
               ]
             },
             {
@@ -3183,26 +2975,18 @@ export const IDL: ExampleNativeTokenTransfers = {
       "accounts": [
         {
           "name": "payer",
-          "isMut": true,
+          "isMut": false,
           "isSigner": true
         },
         {
           "name": "config",
-          "accounts": [
-            {
-              "name": "config",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "tokenAuthority",
           "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "CHECK The seeds constraint ensures that this is the correct address"
-          ]
+          "isSigner": false
         },
         {
           "name": "mint",
@@ -3212,11 +2996,6 @@ export const IDL: ExampleNativeTokenTransfers = {
         {
           "name": "tokenProgram",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "custody",
-          "isMut": true,
           "isSigner": false
         }
       ],
