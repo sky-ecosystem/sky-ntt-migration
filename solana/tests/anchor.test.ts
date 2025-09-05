@@ -335,12 +335,12 @@ describe("example-native-token-transfers", () => {
       } as const;
 
       const serialized = serializePayload(
-        "Ntt:WormholeTransfer" as any,
+        "Ntt:WormholeTransfer",
         sendingTransceiverMessage
       );
       const published = emitter.publishMessage(0, serialized, 200);
       const rawVaa = guardians.addSignatures(published, [0]);
-      const vaa = deserialize("Ntt:WormholeTransfer" as any, serialize(rawVaa));
+      const vaa = deserialize("Ntt:WormholeTransfer", serialize(rawVaa));
 
       const redeemTxs = ntt.redeem([vaa], sender);
       try {
