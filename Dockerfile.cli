@@ -4,15 +4,29 @@
 # The old installer url returns a 403. So we instead rely on solana binaries cached on docker hub. Everything is fine.
 FROM backpackapp/build:v0.30.1@sha256:c160fe32cba7c463981110b2aac2924de4833c06a0af6473a830ead880c4ef3b as base
 
-RUN apt update && apt install -y python3 build-essential git curl unzip jq
+# Install all system dependencies in a single layer to maximize cache efficiency
+RUN apt update && apt install -y \
+    python3 \
+    build-essential \
+    git \
+    curl \
+    unzip \
+    jq \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt clean
 
+# Install tools in parallel where possible and cache them
 RUN curl -fsSL https://bun.sh/install | bash
 
-RUN curl -L https://foundry.paradigm.xyz | bash
-RUN bash -ci "foundryup"
+# Add bun to PATH for all subsequent layers
+ENV PATH="/root/.bun/bin:$PATH"
+
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    bash -ci "foundryup"
 
 FROM base as base-solana
 
+# Cache Rust/Cargo dependencies separately from source changes
 RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 avm --locked --force
 RUN avm install 0.29.0
 RUN avm use 0.29.0
@@ -23,32 +37,66 @@ FROM base as cli-remote
 # This build stage tests that path.
 COPY cli/install.sh cli/install.sh
 RUN bash -ci "./cli/install.sh"
+RUN bash -ci "which ntt"
 
 FROM base-solana as cli-local
 # NOTE: when invoking the installer inside of the source tree, it installs from
 # the local source tree.
 # This build stage tests that path.
 WORKDIR /app
-COPY tsconfig*.json package*.json ./
+
+# Copy package files first for better layer caching
+# This allows npm/cargo dependencies to be cached even when source code changes
+COPY package.json package-lock.json tsconfig*.json ./
+COPY solana/package.json solana/
+COPY evm/ts/package.json evm/ts/
+COPY cli/package.json cli/package-lock.json cli/
+
+# Install dependencies in a separate layer (cached unless package.json changes)
+RUN npm ci --prefer-offline --no-audit
+
+# Copy source code after dependencies are installed
 COPY sdk sdk
-COPY solana/package.json solana/package.json
 COPY solana/ts solana/ts
+COPY solana/programs solana/programs
+COPY solana/Anchor.toml solana/
+COPY solana/tsconfig*.json solana/
 COPY evm/ts evm/ts
-COPY solana/tsconfig.*.json solana/
-COPY cli/package.json cli/package.json
-COPY cli/package-lock.json cli/package-lock.json
+COPY evm/foundry.toml evm/
+COPY evm/script evm/script
 COPY cli/src cli/src
 COPY cli/install.sh cli/install.sh
+
+# Install CLI tools
 RUN bash -ci "./cli/install.sh"
+# Verify ntt CLI is accessible
+RUN bash -ci "which ntt"
 
 FROM cli-local as cli-local-test
+
+# Copy test files and remaining source
 COPY cli/test cli/test
 COPY evm evm
-RUN bash -ci "./cli/test/sepolia-bsc.sh"
+
+# Set resource limits to prevent OOM kills
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV CARGO_BUILD_JOBS=2
+
+# Run tests with timeout protection
+RUN timeout 600 bash -ci "./cli/test/sepolia-bsc.sh" || exit 1
 
 FROM cli-local as cli-local-test-solana
+
+# Copy test files and remaining source  
 COPY cli/test cli/test
 # evm/script needed for the cli, at least for now
 COPY evm/script evm/script
 COPY solana solana
-RUN bash -ci "./cli/test/solana.sh --use-tmp-dir"
+
+# Set resource limits and parallel build constraints
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV CARGO_BUILD_JOBS=2
+ENV RUST_BACKTRACE=1
+
+# Run Solana tests with timeout and temp directory
+RUN timeout 900 bash -ci "./cli/test/solana.sh --use-tmp-dir" || exit 1
