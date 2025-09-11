@@ -1956,8 +1956,7 @@ export type ExampleNativeTokenTransfers = {
       "msg": "NoRegisteredTransceivers"
     }
   ]
-};
-
+}
 export const IDL: ExampleNativeTokenTransfers = {
   "version": "2.0.0",
   "name": "example_native_token_transfers",
@@ -3916,4 +3915,5 @@ export const IDL: ExampleNativeTokenTransfers = {
       "msg": "NoRegisteredTransceivers"
     }
   ]
-};
+}
+
