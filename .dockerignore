@@ -1,0 +1,79 @@
+# .dockerignore - Optimize Docker build context
+# Exclude files that don't need to be sent to Docker daemon
+
+# Git files
+.git
+.gitignore
+.github/
+
+# Documentation
+*.md
+docs/
+README*
+LICENSE*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components/
+
+# node_modules (will be installed during build)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs that shouldn't be included
+dist/
+build/
+out/
+target/
+
+# Cargo lock files (will be generated during build)
+**/Cargo.lock
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Docker files themselves
+Dockerfile*
+docker-compose*
