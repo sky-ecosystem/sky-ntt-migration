@@ -166,23 +166,6 @@ contract NttManager is INttManager, RateLimiter, ManagerBase {
     // ==================== External Interface ===============================================
 
     /// @inheritdoc INttManager
-    function transfer(uint256, uint16, bytes32) external payable returns (uint64) {
-        revert TransfersPermanentlyDisabled();
-    }
-
-    /// @inheritdoc INttManager
-    function transfer(
-        uint256,
-        uint16,
-        bytes32,
-        bytes32,
-        bool,
-        bytes memory
-    ) external payable returns (uint64) {
-        revert TransfersPermanentlyDisabled();
-    }
-
-    /// @inheritdoc INttManager
     function attestationReceived(
         uint16 sourceChainId,
         bytes32 sourceNttManagerAddress,

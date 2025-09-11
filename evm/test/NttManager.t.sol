@@ -124,9 +124,6 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         // When the NttManager is paused, initiating transfers, completing queued transfers on both source and destination chains,
         // executing transfers and attesting to transfers should all revert
-        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        nttManager.transfer(0, 0, bytes32(0));
-
         vm.expectRevert(
             abi.encodeWithSelector(PausableUpgradeable.RequireContractIsNotPaused.selector)
         );
@@ -284,81 +281,6 @@ contract TestNttManager is Test, IRateLimiterEvents {
 
         // We should be able to renable an already registered transceiver at the cap
         nttManager.setTransceiver(address(e));
-    }
-
-    function test_passingInstructionsToTransceivers() public {
-        // Let's register a transceiver and then disable the original transceiver. We now have 2 registered transceivers
-        // since we register 1 in the setup
-        DummyTransceiver e = new DummyTransceiver(address(nttManager));
-        nttManager.setTransceiver(address(e));
-        nttManager.removeTransceiver(address(dummyTransceiver));
-
-        address user_A = address(0x123);
-        address user_B = address(0x456);
-
-        DummyToken token = DummyToken(nttManager.token());
-
-        uint8 decimals = token.decimals();
-
-        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
-        nttManager.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
-
-        token.mintDummy(address(user_A), 5 * 10 ** decimals);
-
-        vm.startPrank(user_A);
-
-        token.approve(address(nttManager), 3 * 10 ** decimals);
-
-        // Pass some instructions for the enabled transceiver
-        TransceiverStructs.TransceiverInstruction memory transceiverInstruction =
-            TransceiverStructs.TransceiverInstruction({index: 1, payload: new bytes(1)});
-        TransceiverStructs.TransceiverInstruction[] memory transceiverInstructions =
-            new TransceiverStructs.TransceiverInstruction[](1);
-        transceiverInstructions[0] = transceiverInstruction;
-        bytes memory instructions =
-            TransceiverStructs.encodeTransceiverInstructions(transceiverInstructions);
-
-        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        nttManager.transfer(
-            1 * 10 ** decimals,
-            chainId2,
-            toWormholeFormat(user_B),
-            toWormholeFormat(user_A),
-            false,
-            instructions
-        );
-    }
-
-    function test_cancellingOutboundQueuedTransfers() public {
-        address user_A = address(0x123);
-        address user_B = address(0x456);
-
-        DummyToken token = DummyToken(nttManager.token());
-
-        uint8 decimals = token.decimals();
-
-        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
-        nttManager.setOutboundLimit(0);
-
-        token.mintDummy(address(user_A), 5 * 10 ** decimals);
-
-        vm.startPrank(user_A);
-
-        token.approve(address(nttManager), 3 * 10 ** decimals);
-
-        uint256 userBalanceBefore = token.balanceOf(user_A);
-        uint256 nttManagerBalanceBefore = token.balanceOf(address(nttManager));
-
-        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        uint64 s1 = nttManager.transfer(
-            1 * 10 ** decimals,
-            chainId2,
-            toWormholeFormat(user_B),
-            toWormholeFormat(user_A),
-            true,
-            new bytes(1)
-        );
-        vm.stopPrank();
     }
 
     // == threshold
@@ -541,50 +463,6 @@ contract TestNttManager is Test, IRateLimiterEvents {
         assertEq(nttManagerOther.messageAttestations(hash), 1);
     }
 
-    function test_transferWithAmountAndDecimalsThatCouldOverflow() public {
-        // The source chain has 18 decimals trimmed to 8, and the peer has 6 decimals trimmed to 6
-        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), 6, type(uint64).max);
-
-        address user_A = address(0x123);
-        address user_B = address(0x456);
-        DummyToken token = DummyToken(nttManager.token());
-        uint8 decimals = token.decimals();
-        assertEq(decimals, 18);
-
-        token.mintDummy(address(user_A), type(uint256).max);
-
-        vm.startPrank(user_A);
-        token.approve(address(nttManager), type(uint256).max);
-
-        // When transferring to a chain with 6 decimals the amount will get trimmed to 6 decimals
-        // and then scaled back up to 8 for local accounting. If we get the trimmed amount to be
-        // type(uint64).max, then when scaling up we could overflow. We safely cast to prevent this.
-
-        uint256 amount = type(uint64).max * 10 ** (decimals - 6);
-
-        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        nttManager.transfer(
-            amount,
-            chainId2,
-            toWormholeFormat(user_B),
-            toWormholeFormat(user_A),
-            false,
-            new bytes(1)
-        );
-
-        // A (slightly) more sensible amount should work normally
-        amount = (type(uint64).max * 10 ** (decimals - 6 - 2)) - 150000000000; // Subtract this to make sure we don't have dust
-        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        nttManager.transfer(
-            amount,
-            chainId2,
-            toWormholeFormat(user_B),
-            toWormholeFormat(user_A),
-            false,
-            new bytes(1)
-        );
-    }
-
     function test_attestationQuorum() public {
         address user_B = address(0x456);
 
@@ -733,42 +611,6 @@ contract TestNttManager is Test, IRateLimiterEvents {
         );
 
         assertEq(token.balanceOf(address(user_B)), transferAmount.untrim(token.decimals()) * 2);
-    }
-
-    function test_transferWithInstructionIndexOutOfBounds() public {
-        TransceiverStructs.TransceiverInstruction memory TransceiverInstruction =
-            TransceiverStructs.TransceiverInstruction({index: 100, payload: new bytes(1)});
-        TransceiverStructs.TransceiverInstruction[] memory TransceiverInstructions =
-            new TransceiverStructs.TransceiverInstruction[](1);
-        TransceiverInstructions[0] = TransceiverInstruction;
-        bytes memory encodedInstructions =
-            TransceiverStructs.encodeTransceiverInstructions(TransceiverInstructions);
-
-        address user_A = address(0x123);
-        address user_B = address(0x456);
-
-        DummyToken token = DummyToken(nttManager.token());
-
-        uint8 decimals = token.decimals();
-
-        nttManager.setPeer(chainId2, toWormholeFormat(address(0x1)), 9, type(uint64).max);
-        nttManager.setOutboundLimit(packTrimmedAmount(type(uint64).max, 8).untrim(decimals));
-
-        token.mintDummy(address(user_A), 5 * 10 ** decimals);
-
-        vm.startPrank(user_A);
-
-        token.approve(address(nttManager), 3 * 10 ** decimals);
-
-        vm.expectRevert(abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector));
-        nttManager.transfer(
-            1 * 10 ** decimals,
-            chainId2,
-            toWormholeFormat(user_B),
-            toWormholeFormat(user_A),
-            false,
-            encodedInstructions
-        );
     }
 
     function test_migrateLockedTokens() public {

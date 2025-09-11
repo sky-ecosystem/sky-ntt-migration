@@ -432,48 +432,8 @@ contract TestUpgrades is Test, IRateLimiterEvents {
     function basicFunctionality() public {
         vm.chainId(chainId1);
 
-        // Setting up the transfer
-        DummyToken token1 = DummyToken(nttManagerChain1.token());
-
-        uint8 decimals = token1.decimals();
-        uint256 sendingAmount = 5 * 10 ** decimals;
-        token1.mintDummy(address(userA), 5 * 10 ** decimals);
-        vm.startPrank(userA);
-        token1.approve(address(nttManagerChain1), sendingAmount);
-
-        vm.recordLogs();
-
         // Fetch quote
-        (, uint256 totalQuote) =
-            nttManagerChain1.quoteDeliveryPrice(chainId2, encodeTransceiverInstruction(true));
-
-        // Send token through standard means (not relayer)
-        {
-            uint256 nttManagerBalanceBefore = token1.balanceOf(address(nttManagerChain1));
-            uint256 userBalanceBefore = token1.balanceOf(address(userA));
-            bytes memory instruction = encodeTransceiverInstruction(true);
-            vm.expectRevert(
-                abi.encodeWithSelector(INttManager.TransfersPermanentlyDisabled.selector)
-            );
-            nttManagerChain1.transfer{value: totalQuote}(
-                sendingAmount,
-                chainId2,
-                toWormholeFormat(userB),
-                toWormholeFormat(userA),
-                false,
-                instruction
-            );
-
-            // Balance check on funds
-            uint256 nttManagerBalanceAfter = token1.balanceOf(address(nttManagerChain1));
-            uint256 userBalanceAfter = token1.balanceOf(address(userA));
-            require(
-                nttManagerBalanceBefore == nttManagerBalanceAfter, "Should not change the tokens"
-            );
-            require(userBalanceBefore == userBalanceAfter, "User should not have sent tokens");
-        }
-
-        vm.stopPrank();
+        nttManagerChain1.quoteDeliveryPrice(chainId2, encodeTransceiverInstruction(true));
     }
 
     function encodeTransceiverInstruction(

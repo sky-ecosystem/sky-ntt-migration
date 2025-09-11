@@ -146,29 +146,6 @@ contract IntegrationHelpers is Test {
         return token.totalSupply();
     }
 
-    // Send token through standard relayer
-    function transferToken(
-        address to,
-        address refund,
-        NttManager sourceManager,
-        uint256 sendingAmount,
-        uint16 recipientChainId,
-        WormholeTransceiver[] memory transceivers,
-        bool relayer_off
-    ) public {
-        uint256 quoteSum = _quotePrices(transceivers, recipientChainId, relayer_off);
-
-        // refund the amount back to the user that sent the transfer
-        sourceManager.transfer{value: quoteSum}(
-            sendingAmount,
-            recipientChainId,
-            toWormholeFormat(to),
-            toWormholeFormat(refund),
-            relayer_off,
-            encodeTransceiverInstruction(relayer_off)
-        );
-    }
-
     function _getWormholeMessage(
         WormholeSimulator guardian,
         Vm.Log[] memory logs,
