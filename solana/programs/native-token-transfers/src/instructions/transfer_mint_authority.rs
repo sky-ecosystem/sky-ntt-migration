@@ -8,8 +8,11 @@ use crate::
 #[derive(Accounts)]
 #[instruction(args: TransferMintAuthorityArgs)]
 pub struct TransferMintAuthority<'info> {
-    pub payer: Signer<'info>,
+    pub owner: Signer<'info>,
 
+    #[account(
+        has_one = owner,
+    )]
     pub config: Account<'info, Config>,
 
     #[account(
@@ -38,8 +41,6 @@ pub fn transfer_mint_authority<'info>(
     ctx: Context<'_, '_, '_, 'info, TransferMintAuthority<'info>>,
     args: TransferMintAuthorityArgs,
 ) -> Result<()> {
-    assert!(ctx.accounts.config.owner == ctx.accounts.payer.key(), "Only the owner can transfer the mint authority");
-    
     token_interface::set_authority(
         CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), 
         token_interface::SetAuthority {
