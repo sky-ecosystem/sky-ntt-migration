@@ -55,7 +55,7 @@ async function initialize(connection: Connection, nttProgram: Program<NttBinding
 // https://explorer.solana.com/tx/5WmfcW599MtiPvM5gA2o3obVRsisfHioaZwjuVvXuJXuQTje9sHr8VxVsznNPc4sPHa9fyMJ5jujs4vV4LENT91m?cluster=devnet
 async function transferMintAuthority(connection: Connection, nttProgram: Program<NttBindings.NativeTokenTransfer<IdlVersion>>, payer: Keypair, mint: PublicKey, newMintAuthority: PublicKey) {
   const ix = await NTT.createTransferMintAuthorityInstruction(nttProgram, {
-    payer: payer.publicKey,
+    owner: payer.publicKey,
     mint,
     newMintAuthority,
     tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
