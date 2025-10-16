@@ -98,6 +98,7 @@ Set the SOLANA_PRIVATE_KEY of payer wallet on Solana. It needs to have SOL balan
 In the root directory of the project run:
 
 ```
+# Assuming you sent a single Wormhole message in your transaction on source chain
 bun solana/ts/scripts/postVaa.ts YOUR_SENT_TRANSACTION_HASH_ON_SOURCE_CHAIN
 ```
 
@@ -126,3 +127,5 @@ Governance message delivery transaction sent: 9VkKKewQFHj1YNX8PyLA4Pag8BLJ9MGiB4
 ```
 
 You can copy the last transaction hash received from "Transaction sent:" log and paste it in the Solana explorer to double check it has been successfully executed: https://explorer.solana.com/?cluster=devnet
+
+Note: If you sent multiple Wormhole messages in single transaction on source chain you can run: `postVaa.ts <chain> <emitter> <sequence>` instead (eg. `bun solana/ts/scripts/postVaa.ts Avalanche 0x0000000000000000000000000804a6e2798f42c7f3c97215ddf958d5500f8ec8 8`).

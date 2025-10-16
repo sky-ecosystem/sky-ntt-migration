@@ -18,7 +18,7 @@ import {
   utils,
 } from "@wormhole-foundation/sdk-solana-core";
 
-import { wormhole } from "@wormhole-foundation/sdk";
+import { UniversalAddress, wormhole, WormholeMessageId, Chain } from "@wormhole-foundation/sdk";
 import solana from "@wormhole-foundation/sdk/solana";
 import evm from "@wormhole-foundation/sdk/evm";
 import { chainToBytes, derivePda, U64 } from "../lib/utils.js";
@@ -29,12 +29,6 @@ async function main() {
   if (process.env['SOLANA_PRIVATE_KEY'] === undefined) {
     throw new Error("SOLANA_PRIVATE_KEY is not set");
   }
-
-  if (process.argv.length < 3) {
-    throw new Error("Please provide a txId as a command line argument");
-  }
-  const txId = process.argv[2]!;
-
   const connection = new Connection("https://api.devnet.solana.com", "confirmed");
   const key = bs58.decode(process.env['SOLANA_PRIVATE_KEY']);
   const payer = Keypair.fromSecretKey(key);
@@ -44,8 +38,35 @@ async function main() {
   const contracts = (await chain.getWormholeCore() as any).contracts;
   const core = new SolanaWormholeCore("Testnet", "Solana", connection, contracts);
 
+
+  let wormholeMessageId: string | WormholeMessageId;
+
+  if (process.argv.length === 3) {
+    const transactionHash = process.argv[2]!;
+    console.log(`Using transaction hash: ${transactionHash}`);
+    wormholeMessageId = transactionHash;
+  } else if (process.argv.length === 5) {
+    const chain = process.argv[2]! as Chain;
+    const emitter = process.argv[3]!;
+    const sequence = BigInt(process.argv[4]!);
+    
+    console.log(`Using provided parameters: chain=${chain}, emitter=${emitter}, sequence=${sequence}`);
+    
+    wormholeMessageId = {
+      chain: chain,
+      emitter: new UniversalAddress(emitter),
+      sequence: sequence
+    };
+  } else {
+    throw new Error(
+      "Usage:\n" +
+      "postVaa.ts <transactionHash>\n" +
+      "postVaa.ts <chain> <emitter> <sequence>"
+    );
+  }
+
   const vaa = await wh.getVaa(
-    txId,
+    wormholeMessageId,
     "GeneralPurposeGovernance:GeneralPurposeSolana",
     25 * 60 * 1000
   );
