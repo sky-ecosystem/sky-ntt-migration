@@ -1065,7 +1065,7 @@
       "name": "transferMintAuthority",
       "accounts": [
         {
-          "name": "payer",
+          "name": "owner",
           "isMut": false,
           "isSigner": true
         },

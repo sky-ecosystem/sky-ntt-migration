@@ -8,7 +8,6 @@ import {
   Wormhole,
   contracts,
   deserialize,
-  deserializePayload,
   encoding,
   serialize,
   serializePayload,
@@ -21,16 +20,17 @@ import {
   SolanaPlatform,
   getSolanaSignAndSendSigner,
 } from "@wormhole-foundation/sdk-solana";
-import { SolanaWormholeCore } from "@wormhole-foundation/sdk-solana-core";
 import * as fs from "fs";
 
 import {
   PublicKey,
   sendAndConfirmTransaction,
+  SendTransactionError,
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
 import { DummyTransferHook } from "../ts/idl/1_0_0/ts/dummy_transfer_hook.js";
+import { ExampleNativeTokenTransfers } from "../ts/idl/2_0_0/ts/example_native_token_transfers.js";
 import { SolanaNtt } from "../ts/sdk/index.js";
 
 const solanaRootDir = `${__dirname}/../`;
@@ -96,6 +96,9 @@ const mint = anchor.web3.Keypair.generate();
 const dummyTransferHook = anchor.workspace
   .DummyTransferHook as anchor.Program<DummyTransferHook>;
 
+const nttProgram = anchor.workspace
+  .ExampleNativeTokenTransfers as anchor.Program<ExampleNativeTokenTransfers>;
+
 const [extraAccountMetaListPDA] = PublicKey.findProgramAddressSync(
   [Buffer.from("extra-account-metas"), mint.publicKey.toBuffer()],
   dummyTransferHook.programId
@@ -110,10 +113,6 @@ async function counterValue(): Promise<anchor.BN> {
   const counter = await dummyTransferHook.account.counter.fetch(counterPDA);
   return counter.count;
 }
-
-const coreBridge = new SolanaWormholeCore("Devnet", "Solana", connection, {
-  coreBridge: CORE_BRIDGE_ADDRESS,
-});
 
 const TOKEN_PROGRAM = spl.TOKEN_2022_PROGRAM_ID;
 
@@ -398,6 +397,174 @@ describe("example-native-token-transfers", () => {
         );
         expect(version).toBe("2.0.0");
       });
+    });
+  });
+
+  describe("Transfer Mint Authority", () => {
+    let newMintAuthority: anchor.web3.Keypair;
+    let nonOwner: anchor.web3.Keypair;
+
+    beforeAll(async () => {
+      newMintAuthority = anchor.web3.Keypair.generate();
+      nonOwner = anchor.web3.Keypair.generate();
+      
+      const airdropTx = await connection.requestAirdrop(
+        nonOwner.publicKey,
+        1000000000 // 1 SOL
+      );
+      await connection.confirmTransaction(airdropTx);
+    });
+
+    it("Non-owner cannot transfer mint authority", async () => {
+      const [configPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        nttProgram.programId
+      );
+      const config = await nttProgram.account.config.fetch(configPDA);
+
+      const [tokenAuthorityPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("token_authority")],
+        nttProgram.programId
+      );
+
+      const anotherMintAuthority = anchor.web3.Keypair.generate();
+
+      await expect(
+        nttProgram.methods
+          .transferMintAuthority({
+            newMintAuthority: anotherMintAuthority.publicKey,
+          })
+          .accountsStrict({
+            owner: nonOwner.publicKey,
+            config: configPDA,
+            tokenAuthority: tokenAuthorityPDA,
+            mint: mint.publicKey,
+            tokenProgram: TOKEN_PROGRAM,
+          })
+          .signers([nonOwner])
+          .rpc()
+      ).rejects.toThrow(`AnchorError caused by account: config. Error Code: ConstraintHasOne. Error Number: 2001. Error Message: A has one constraint was violated.
+Program log: Left:
+Program log: ${config.owner.toBase58()}
+Program log: Right:
+Program log: ${nonOwner.publicKey.toBase58()}`);
+    });
+
+    it("Owner can successfully transfer mint authority", async () => {
+      const [configPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        nttProgram.programId
+      );
+
+      const [tokenAuthorityPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("token_authority")],
+        nttProgram.programId
+      );
+
+      const mintInfoBefore = await spl.getMint(
+        connection,
+        mint.publicKey,
+        undefined,
+        TOKEN_PROGRAM
+      );
+
+      expect(mintInfoBefore.mintAuthority?.toBase58()).toBe(tokenAuthorityPDA.toBase58());
+
+      const transferTx = await nttProgram.methods
+        .transferMintAuthority({
+          newMintAuthority: newMintAuthority.publicKey,
+        })
+        .accountsStrict({
+          owner: payer.publicKey,
+          config: configPDA,
+          tokenAuthority: tokenAuthorityPDA,
+          mint: mint.publicKey,
+          tokenProgram: TOKEN_PROGRAM,
+        })
+        .signers([payer])
+        .rpc();
+
+      await connection.confirmTransaction(transferTx);
+
+      const mintInfoAfter = await spl.getMint(
+        connection,
+        mint.publicKey,
+        undefined,
+        TOKEN_PROGRAM
+      );
+
+      expect(mintInfoAfter.mintAuthority?.toBase58()).toBe(
+        newMintAuthority.publicKey.toBase58()
+      );
+    });
+
+    it("Cannot transfer mint authority twice", async () => {
+      const [configPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        nttProgram.programId
+      );
+
+      const [tokenAuthorityPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("token_authority")],
+        nttProgram.programId
+      );
+
+      const thirdMintAuthority = anchor.web3.Keypair.generate();
+
+      try {
+        await nttProgram.methods
+          .transferMintAuthority({
+            newMintAuthority: thirdMintAuthority.publicKey,
+          })
+          .accountsStrict({
+            owner: payer.publicKey,
+            config: configPDA,
+            tokenAuthority: tokenAuthorityPDA,
+            mint: mint.publicKey,
+            tokenProgram: TOKEN_PROGRAM,
+          })
+          .signers([payer])
+          .rpc();
+
+          expect(false).toBe(true);
+        } catch (e: any) {
+          if (e instanceof SendTransactionError) {
+            expect(e.transactionError.message).toEqual('Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4');
+            expect(e.logs?.some(log => log.includes('Error: owner does not match'))).toBe(true);
+          } else {
+            console.error(e);
+            throw e;
+          }
+        }
+    });
+
+    it("Mint authority is correctly transferred", async () => {
+      const testTokenAccount = await spl.createAssociatedTokenAccount(
+        connection,
+        payer,
+        mint.publicKey,
+        newMintAuthority.publicKey,
+        undefined,
+        TOKEN_PROGRAM,
+        spl.ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      expect((await connection.getTokenAccountBalance(testTokenAccount)).value.amount).toBe("0");
+
+      await spl.mintTo(
+        connection,
+        payer,
+        mint.publicKey,
+        testTokenAccount,
+        newMintAuthority,
+        1000n,
+        undefined,
+        undefined,
+        TOKEN_PROGRAM
+      );
+
+      const balance = await connection.getTokenAccountBalance(testTokenAccount);
+      expect(balance.value.amount).toBe("1000");
     });
   });
 });

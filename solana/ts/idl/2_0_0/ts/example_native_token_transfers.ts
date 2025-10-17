@@ -1065,7 +1065,7 @@ export type ExampleNativeTokenTransfers = {
       "name": "transferMintAuthority",
       "accounts": [
         {
-          "name": "payer",
+          "name": "owner",
           "isMut": false,
           "isSigner": true
         },
@@ -2974,7 +2974,7 @@ export const IDL: ExampleNativeTokenTransfers = {
       "name": "transferMintAuthority",
       "accounts": [
         {
-          "name": "payer",
+          "name": "owner",
           "isMut": false,
           "isSigner": true
         },

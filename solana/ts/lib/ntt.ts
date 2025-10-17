@@ -277,7 +277,7 @@ export namespace NTT {
   export async function createTransferMintAuthorityInstruction(
     program: Program<NttBindings.NativeTokenTransfer<IdlVersion>>,
     args: {
-      payer: PublicKey;
+      owner: PublicKey;
       mint: PublicKey;
       newMintAuthority: PublicKey;
       tokenProgram: PublicKey;
@@ -289,7 +289,7 @@ export namespace NTT {
     return await program.methods
       .transferMintAuthority({ newMintAuthority: args.newMintAuthority })
       .accountsStrict({
-        payer: args.payer,
+        owner: args.owner,
         config: pdas.configAccount(),
         mint: args.mint,
         tokenProgram: args.tokenProgram,
