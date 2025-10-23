@@ -1,3 +1,4 @@
+import { PublicKey } from "@solana/web3.js";
 import {
   Chain,
   ChainAddress,
@@ -62,3 +63,14 @@ function getEnv(key: string, dev?: string): string {
 
   return val;
 }
+
+/** Create "Sentinel" PublicKey to match WH governance placeholder keys */
+export const generateSentinelPubkey = (name: string) => {
+  if (name.length > 32) {
+    throw new Error("Sentinel key name must be 32 bytes or less");
+  }
+  const buf = Buffer.alloc(32);
+  const nameBytes = Buffer.from(name);
+  buf.set(nameBytes);
+  return new PublicKey(buf);
+};
