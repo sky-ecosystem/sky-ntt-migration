@@ -82,6 +82,22 @@ export const U64 = {
     return ret;
   },
   from: (amount: BN, unit: number) => amount.toNumber() / unit,
+  toBeBytes: (value: number | bigint | BN): Uint8Array => {
+    let bigintValue: bigint;
+    
+    if (value instanceof BN) {
+      bigintValue = BigInt(value.toString());
+    } else if (typeof value === 'bigint') {
+      bigintValue = value;
+    } else {
+      bigintValue = BigInt(value);
+    }
+    
+    const buffer = new ArrayBuffer(8);
+    const view = new DataView(buffer);
+    view.setBigUint64(0, bigintValue, false); // false = big-endian
+    return new Uint8Array(buffer);
+  },
 };
 
 type Seed = Uint8Array | string;
