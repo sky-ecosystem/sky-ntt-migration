@@ -1,0 +1,1 @@
+export const abi = [{"inputs":[],"name":"nextMessageSequence","outputs":[{"internalType":"uint64","name":"","type":"uint64"}],"stateMutability":"view","type":"function"}] as const;
