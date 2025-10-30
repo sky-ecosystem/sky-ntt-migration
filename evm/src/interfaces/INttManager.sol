@@ -135,41 +135,6 @@ interface INttManager is IManagerBase {
     /// @dev Selector 0x20371f2a.
     error InvalidPeerSameChainId();
 
-    /// @notice Transfer a given amount to a recipient on a given chain. This function is called
-    ///         by the user to send the token cross-chain. This function will either lock or burn the
-    ///         sender's tokens. Finally, this function will call into registered `Endpoint` contracts
-    ///         to send a message with the incrementing sequence number and the token transfer payload.
-    /// @param amount The amount to transfer.
-    /// @param recipientChain The Wormhole chain ID for the destination.
-    /// @param recipient The recipient address.
-    /// @return msgId The resulting message ID of the transfer
-    function transfer(
-        uint256 amount,
-        uint16 recipientChain,
-        bytes32 recipient
-    ) external payable returns (uint64 msgId);
-
-    /// @notice Transfer a given amount to a recipient on a given chain. This function is called
-    ///         by the user to send the token cross-chain. This function will either lock or burn the
-    ///         sender's tokens. Finally, this function will call into registered `Endpoint` contracts
-    ///         to send a message with the incrementing sequence number and the token transfer payload.
-    /// @dev Transfers are queued if the outbound limit is hit and must be completed by the client.
-    /// @param amount The amount to transfer.
-    /// @param recipientChain The Wormhole chain ID for the destination.
-    /// @param recipient The recipient address.
-    /// @param refundAddress The address to which a refund for unussed gas is issued on the recipient chain.
-    /// @param shouldQueue Whether the transfer should be queued if the outbound limit is hit.
-    /// @param encodedInstructions Additional instructions to be forwarded to the recipient chain.
-    /// @return msgId The resulting message ID of the transfer
-    function transfer(
-        uint256 amount,
-        uint16 recipientChain,
-        bytes32 recipient,
-        bytes32 refundAddress,
-        bool shouldQueue,
-        bytes memory encodedInstructions
-    ) external payable returns (uint64 msgId);
-
     /// @notice Complete an outbound transfer that's been queued.
     /// @dev This method is called by the client to complete an outbound transfer that's been queued.
     /// @param queueSequence The sequence of the message in the queue.

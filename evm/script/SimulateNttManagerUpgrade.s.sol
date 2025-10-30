@@ -12,7 +12,7 @@ import {PausableUpgradeable} from "../src/libraries/PausableUpgradeable.sol";
 
 import {ParseNttConfig} from "./helpers/ParseNttConfig.sol";
 
-contract UpgradeNttManagerScript is ParseNttConfig {
+contract SimulateNttManagerUpgradeScript is ParseNttConfig {
     struct DeploymentParams {
         address token;
         INttManager.Mode mode;
@@ -53,11 +53,17 @@ contract UpgradeNttManagerScript is ParseNttConfig {
         console2.log("before upgrade");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
 
-        vm.startBroadcast();
+        vm.startPrank(nttManager.owner());
         upgradeNttManager(nttManager, params);
-        vm.stopBroadcast();
+        vm.stopPrank();
 
         console2.log("after upgrade");
+        console2.log("Is NttManager paused: ", nttManager.isPaused());
+
+        vm.prank(nttManager.owner());
+        nttManager.pause();
+
+        console2.log("after pauseSend");
         console2.log("Is NttManager paused: ", nttManager.isPaused());
     }
 }

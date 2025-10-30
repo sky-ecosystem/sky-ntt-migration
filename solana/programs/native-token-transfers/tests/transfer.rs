@@ -91,12 +91,6 @@ pub async fn test_transfer_locking() {
 }
 
 #[tokio::test]
-pub async fn test_transfer_burning() {
-    let (mut ctx, test_data) = setup(Mode::Burning).await;
-    test_transfer(&mut ctx, &test_data, Mode::Burning).await;
-}
-
-#[tokio::test]
 pub async fn test_transfer_locking_with_transfer_fee() {
     let (mut ctx, test_data) = setup_with_transfer_fee(Mode::Locking).await;
     test_transfer_with_transfer_fee(
@@ -104,18 +98,6 @@ pub async fn test_transfer_locking_with_transfer_fee() {
         &test_data,
         Mode::Locking,
         NTTError::BadAmountAfterTransfer.into(),
-    )
-    .await;
-}
-
-#[tokio::test]
-pub async fn test_transfer_burning_with_transfer_fee() {
-    let (mut ctx, test_data) = setup_with_transfer_fee(Mode::Burning).await;
-    test_transfer_with_transfer_fee(
-        &mut ctx,
-        &test_data,
-        Mode::Burning,
-        spl_token::error::TokenError::InsufficientFunds as u32,
     )
     .await;
 }

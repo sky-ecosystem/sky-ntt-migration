@@ -81,13 +81,6 @@ pub mod example_native_token_transfers {
         Ok(VERSION.to_string())
     }
 
-    pub fn transfer_burn<'info>(
-        ctx: Context<'_, '_, '_, 'info, TransferBurn<'info>>,
-        args: TransferArgs,
-    ) -> Result<()> {
-        instructions::transfer_burn(ctx, args)
-    }
-
     pub fn transfer_lock<'info>(
         ctx: Context<'_, '_, '_, 'info, TransferLock<'info>>,
         args: TransferArgs,
@@ -180,6 +173,13 @@ pub mod example_native_token_transfers {
         args: BroadcastPeerArgs,
     ) -> Result<()> {
         transceivers::wormhole::instructions::broadcast_peer(ctx, args)
+    }
+
+    pub fn transfer_mint_authority<'info>(
+        ctx: Context<'_, '_, '_, 'info, TransferMintAuthority<'info>>,
+        args: TransferMintAuthorityArgs,
+    ) -> Result<()> {
+        instructions::transfer_mint_authority(ctx, args)
     }
 }
 

@@ -76,7 +76,6 @@ pub struct Transfer<'info> {
     )]
     /// Tokens are always transferred to the custody account first regardless of
     /// the mode.
-    /// For an explanation, see the note in [`transfer_burn`].
     pub custody: InterfaceAccount<'info, token_interface::TokenAccount>,
 
     pub system_program: Program<'info, System>,
@@ -150,109 +149,6 @@ pub struct TransferBurn<'info> {
     )]
     /// CHECK: The seeds constraint enforces that this is the correct account.
     pub token_authority: UncheckedAccount<'info>,
-}
-
-pub fn transfer_burn<'info>(
-    ctx: Context<'_, '_, '_, 'info, TransferBurn<'info>>,
-    args: TransferArgs,
-) -> Result<()> {
-    let accs = ctx.accounts;
-
-    let TransferArgs {
-        mut amount,
-        recipient_chain,
-        recipient_address,
-        should_queue,
-    } = args;
-
-    // TODO: should we revert if we have dust?
-    let trimmed_amount = TrimmedAmount::remove_dust(
-        &mut amount,
-        accs.common.mint.decimals,
-        accs.peer.token_decimals,
-    )
-    .map_err(NTTError::from)?;
-
-    let before = accs.common.custody.amount;
-
-    // NOTE: burning tokens is a two-step process:
-    // 1. Transfer the tokens to the custody account
-    // 2. Burn the tokens from the custody account
-    //
-    // This is done to ensure that if the token has a transfer hook defined, it
-    // will be called before the tokens are burned.
-    // Unfortunately the Token2022 program doesn't trigger transfer hooks when
-    // burning tokens, so we have to do it "manually" via a transfer.
-    //
-    // If we didn't do this, transfer hooks could be bypassed by transferring
-    // the tokens out through NTT first, then back in to the intended recipient.
-    //
-    // The [`release_inbound_mint`] function operates in a similar way
-    // (mint to custody, *then* transfer to recipient).
-
-    // Step 1: transfer to custody account
-    onchain::invoke_transfer_checked(
-        &accs.common.token_program.key(),
-        accs.common.from.to_account_info(),
-        accs.common.mint.to_account_info(),
-        accs.common.custody.to_account_info(),
-        accs.session_authority.to_account_info(),
-        ctx.remaining_accounts,
-        amount,
-        accs.common.mint.decimals,
-        &[&[
-            crate::SESSION_AUTHORITY_SEED,
-            accs.common.from.owner.as_ref(),
-            args.keccak256().as_ref(),
-            &[ctx.bumps.session_authority],
-        ]],
-    )?;
-
-    // Step 2: burn the tokens from the custody account
-    token_interface::burn(
-        CpiContext::new_with_signer(
-            accs.common.token_program.to_account_info(),
-            token_interface::Burn {
-                mint: accs.common.mint.to_account_info(),
-                from: accs.common.custody.to_account_info(),
-                authority: accs.token_authority.to_account_info(),
-            },
-            &[&[crate::TOKEN_AUTHORITY_SEED, &[ctx.bumps.token_authority]]],
-        ),
-        amount,
-    )?;
-
-    accs.common.custody.reload()?;
-    let after = accs.common.custody.amount;
-
-    // NOTE: we currently do not support tokens with fees. Support could be
-    // added, but it would require the client to calculate the amount _before_
-    // paying fees that results in an amount that can safely be trimmed.
-    // Otherwise, if the amount after paying fees has dust, then that amount
-    // would be lost.
-    // To support fee tokens, we would first transfer the amount, _then_ assert
-    // that the resulting amount has no dust (instead of removing dust before
-    // the transfer like we do now). We would also need to burn the new amount
-    // _after_ paying fees so as to not burn more than what was transferred to
-    // the custody.
-    if after != before {
-        return Err(NTTError::BadAmountAfterBurn.into());
-    }
-
-    let recipient_ntt_manager = accs.peer.address;
-
-    insert_into_outbox(
-        &mut accs.common,
-        &mut accs.inbox_rate_limit,
-        amount,
-        trimmed_amount,
-        recipient_chain,
-        recipient_ntt_manager,
-        recipient_address,
-        should_queue,
-    )?;
-
-    Ok(())
 }
 
 // Lock/unlock

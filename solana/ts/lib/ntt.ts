@@ -274,6 +274,30 @@ export namespace NTT {
       .instruction();
   }
 
+  export async function createTransferMintAuthorityInstruction(
+    program: Program<NttBindings.NativeTokenTransfer<IdlVersion>>,
+    args: {
+      owner: PublicKey;
+      mint: PublicKey;
+      newMintAuthority: PublicKey;
+      tokenProgram: PublicKey;
+    },
+    pdas?: Pdas
+  ) {
+    pdas = pdas ?? NTT.pdas(program.programId);
+
+    return await program.methods
+      .transferMintAuthority({ newMintAuthority: args.newMintAuthority })
+      .accountsStrict({
+        owner: args.owner,
+        config: pdas.configAccount(),
+        mint: args.mint,
+        tokenProgram: args.tokenProgram,
+        tokenAuthority: pdas.tokenAuthority()
+      })
+      .instruction();
+  }
+
   // This function should be called after each upgrade. If there's nothing to
   // do, it won't actually submit a transaction, so it's cheap to call.
   export async function initializeOrUpdateLUT(
@@ -382,68 +406,7 @@ export namespace NTT {
     },
     pdas?: Pdas
   ): Promise<TransactionInstruction> {
-    pdas = pdas ?? NTT.pdas(program.programId);
-
-    const custody = await custodyAccountAddress(pdas, config);
-    const recipientChain = toChain(args.transferArgs.recipientChain.id);
-    const transferIx = await program.methods
-      .transferBurn(args.transferArgs)
-      .accountsStrict({
-        common: {
-          payer: args.payer,
-          config: { config: pdas.configAccount() },
-          mint: config.mint,
-          from: args.from,
-          tokenProgram: config.tokenProgram,
-          outboxItem: args.outboxItem,
-          outboxRateLimit: pdas.outboxRateLimitAccount(),
-          systemProgram: SystemProgram.programId,
-          custody,
-        },
-        peer: pdas.peerAccount(recipientChain),
-        inboxRateLimit: pdas.inboxRateLimitAccount(recipientChain),
-        sessionAuthority: pdas.sessionAuthority(
-          args.fromAuthority,
-          args.transferArgs
-        ),
-        tokenAuthority: pdas.tokenAuthority(),
-      })
-      .instruction();
-
-    const mintInfo = await splToken.getMint(
-      program.provider.connection,
-      config.mint,
-      undefined,
-      config.tokenProgram
-    );
-    const transferHook = splToken.getTransferHook(mintInfo);
-
-    if (transferHook) {
-      const source = args.from;
-      const mint = config.mint;
-      const destination = await custodyAccountAddress(pdas, config);
-      const owner = pdas.sessionAuthority(
-        args.fromAuthority,
-        args.transferArgs
-      );
-      await addExtraAccountMetasForExecute(
-        program.provider.connection,
-        transferIx,
-        transferHook.programId,
-        source,
-        mint,
-        destination,
-        owner,
-        // TODO(csongor): compute the amount that's passed into transfer.
-        // Leaving this 0 is fine unless the transfer hook accounts addresses
-        // depend on the amount (which is unlikely).
-        // If this turns out to be the case, the amount to put here is the
-        // untrimmed amount after removing dust.
-        0
-      );
-    }
-
-    return transferIx;
+    throw new Error("Not implemented");
   }
 
   /**
