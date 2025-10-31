@@ -3,7 +3,7 @@ import {
   Connection,
   PublicKey
 } from "@solana/web3.js";
-import { chainToChainId, platformToAddressFormat, UniversalAddress, amount, wormhole, WormholeMessageId, routes, TokenId, TransferState, Chain, Wormhole } from "@wormhole-foundation/sdk";
+import { chainToChainId, platformToAddressFormat, UniversalAddress, amount, wormhole, WormholeMessageId, routes, TokenId, TransferState, Chain, Wormhole, deserialize, deserializeUnknownVaa } from "@wormhole-foundation/sdk";
 import { chainToBytes, derivePda } from "../lib/utils.js";
 import { ethers } from "ethers";
 import { abi } from './NTTManagerABI.js'
@@ -102,7 +102,7 @@ async function main() {
 
   await checkSolanaToEVMPathway(context, {
     numberOfMessagesToCheck: 10,
-    skipFirst: 1, // on mainnet skipping first message because it doesn't match the correct expected layout
+    skipFirst: 0,
     skipLast: 0,
   });
 
@@ -173,8 +173,10 @@ async function checkSolanaToEVMPathway(context: InflightCheckerContext, { number
 }
 
 async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, solanaToEvmRouteTransferRequest, evmNtt, wh }: InflightCheckerContext) {
+  const seqStr = `#${sequence}`.padEnd(7);
+
   if (sequence < 1) {
-    throw new Error(`[SOL->EVM]::[${sequence}] Sequence is less than 1`);
+    throw new Error(`[SOL->EVM]::[${seqStr}] Sequence is less than 1`);
   }
 
   const wormholeMessageId: WormholeMessageId = {
@@ -183,11 +185,17 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
     sequence: BigInt(sequence),
   };
 
-  const vaa = await wh.getVaa(
+  const vaaBytes = await wh.getVaaBytes(
       wormholeMessageId,
-      "Ntt:WormholeTransfer",
       10 * 1000
   );
+  const payload = deserializeUnknownVaa(vaaBytes!).payload;
+  if (payload[0] === 156 && payload[1] === 35 && payload[2] === 189 && payload[3] === 59) {
+    console.log(`[SOL->EVM]::[${seqStr}] Ntt:TransceiverInfo protocol      | Status: Skipped`);
+    return;
+  } 
+
+  const vaa = deserialize('Ntt:WormholeTransfer', vaaBytes!);
 
   const tokenAmount = amount.fromBaseUnits(
     BigInt(vaa?.payload.nttManagerPayload.payload.trimmedAmount.amount.toString()!),
@@ -196,7 +204,6 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
 
   let isExecuted = await evmNtt.getIsExecuted(vaa!);
 
-  const seqStr = `#${sequence}`.padEnd(7);
   const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
   const statusStr = isExecuted ? 'Executed' : 'Not executed';
   
