@@ -3,8 +3,8 @@ import {
   Connection,
   PublicKey
 } from "@solana/web3.js";
-import { chainToChainId, platformToAddressFormat, UniversalAddress, amount, wormhole, WormholeMessageId, routes, TokenId, TransferState, Chain, Wormhole, deserialize, deserializeUnknownVaa } from "@wormhole-foundation/sdk";
-import { chainToBytes, derivePda } from "../lib/utils.js";
+import { UniversalAddress, amount, wormhole, WormholeMessageId, routes, TokenId, TransferState, Chain, Wormhole, deserialize, deserializeUnknownVaa, VAA, platformToAddressFormat } from "@wormhole-foundation/sdk";
+import { derivePda } from "../lib/utils.js";
 import { ethers } from "ethers";
 import { abi } from './NTTManagerABI.js'
 import { SolanaNtt } from "../sdk/ntt.js";
@@ -13,7 +13,7 @@ import solana from "@wormhole-foundation/sdk/solana";
 import { nttAutomaticRoute, nttManualRoute, NttRoute } from "../../../sdk/route/src/index.js";
 import { getSigner } from "../../../cli/src/getSigner.js";
 import { EvmNtt } from "../../../evm/ts/src/ntt.js";
-import { SequenceTrackerLayout, ValidatedTransceiverMessageLayout } from "./utils/layouts.js";
+import { SequenceTrackerLayout } from "./utils/layouts.js";
 
 // register protocol implementations
 import "../sdk"; // solana
@@ -158,15 +158,14 @@ async function checkSolanaOutbox({ solanaNtt }: InflightCheckerContext) {
 async function checkSolanaToEVMPathway(context: InflightCheckerContext, { numberOfMessagesToCheck, skipFirst, skipLast }: { numberOfMessagesToCheck: number, skipFirst: number, skipLast: number }) {
   console.log(`[SOL->EVM]::[PATHWAY] Checking last ${numberOfMessagesToCheck} Solana to EVM transfers. Skip first: ${skipFirst}, skip last: ${skipLast}`);
   const sequenceInfo = await connection.getAccountInfo(sequencePDA);
-  const solanaOutboundSequence: number = SequenceTrackerLayout.decode(sequenceInfo?.data).sequence.toNumber()
-  const lastSentSolanaOutboundSequence = solanaOutboundSequence - 1;
+  const lastUsedOutboundSequence: number = SequenceTrackerLayout.decode(sequenceInfo?.data).sequence.toNumber() - 1;
 
-  console.log(`[SOL->EVM]::[PATHWAY] Last sent Solana to EVM sequence: #${lastSentSolanaOutboundSequence} (0-indexed). Total messages: ${lastSentSolanaOutboundSequence + 1}`);
+  console.log(`[SOL->EVM]::[PATHWAY] Last sent Solana to EVM sequence: #${lastUsedOutboundSequence} (0-indexed). Total messages: ${lastUsedOutboundSequence + 1}`);
 
  // message sequences start at 0, so we take the skipFirst - 1 to get the index of the first message to skip
  const firstIndexToSkip = skipFirst - 1;
   for (let i = 0; i < numberOfMessagesToCheck; i++) {
-    const sequenceToCheck = lastSentSolanaOutboundSequence - i - skipLast;
+    const sequenceToCheck = lastUsedOutboundSequence - i - skipLast;
     if (sequenceToCheck === firstIndexToSkip || sequenceToCheck < 0) {
       break;
     }
@@ -183,20 +182,11 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
     sequence: BigInt(sequence),
   };
 
-  const vaaBytes = await wh.getVaaBytes(
-      wormholeMessageId,
-      10 * 1000
-  );
-  const payload = deserializeUnknownVaa(vaaBytes!).payload;
-  if (payload[0] === 156 && payload[1] === 35 && payload[2] === 189 && payload[3] === 59) {
-    console.log(`[SOL->EVM]::[${seqStr}] Ntt:TransceiverInfo               | Status: Skipped`);
-    return;
-  } else if (payload[0] === 24 && payload[1] === 252 && payload[2] === 103 && payload[3] === 194) {
-    console.log(`[SOL->EVM]::[${seqStr}] Ntt:TransceiverRegistration       | Status: Skipped`);
+  const vaa = await obtainVaa(wormholeMessageId, wh, `[SOL->EVM]::[${seqStr}]`);
+
+  if (!vaa) {
     return;
   }
-
-  const vaa = deserialize('Ntt:WormholeTransfer', vaaBytes!);
 
   const tokenAmount = amount.fromBaseUnits(
     BigInt(vaa?.payload.nttManagerPayload.payload.trimmedAmount.amount.toString()!),
@@ -262,15 +252,16 @@ async function checkEVMtoSolanaPathway(context: InflightCheckerContext, { number
 
   const nttManagerEVM = new ethers.Contract(NTT_MANAGER_EVM_ADDRESS, abi, evmProvider);
   
-  const nextMessageSequence = await (nttManagerEVM as any).nextMessageSequence();
-  const lastSentMessageSequenceEVM = nextMessageSequence - 1n;
+  // msgSequence is 2 less than sequence on mainnet because first two messages are configuration messages
+  const nextSequence = await (nttManagerEVM as any).nextMessageSequence() + 2n;
+  const lastSentSequence = nextSequence - 1n;
 
-  console.log(`[EVM->SOL]::[PATHWAY] Last sent EVM to Solana sequence: #${lastSentMessageSequenceEVM} (0-indexed). Total messages: ${lastSentMessageSequenceEVM + BigInt(1)}`);
+  console.log(`[EVM->SOL]::[PATHWAY] Last sent EVM to Solana sequence: #${lastSentSequence} (0-indexed). Total messages: ${lastSentSequence + BigInt(1)}`);
 
   // message sequences start at 0, so we take the skipFirst - 1 to get the index of the first message to skip
   const firstIndexToSkip = skipFirst - 1;
   for (let i = 0; i < numberOfMessagesToCheck; i++) {
-    const sequenceToCheck = Number(lastSentMessageSequenceEVM) - i - skipLast;
+    const sequenceToCheck = Number(lastSentSequence) - i - skipLast;
     if (sequenceToCheck === firstIndexToSkip || sequenceToCheck < 0) {
       break;
     }
@@ -281,109 +272,77 @@ async function checkEVMtoSolanaPathway(context: InflightCheckerContext, { number
   }
 }
 
-async function checkEVMtoSolanaTransfer(msgSequence: number, { wh, evmToSolanaRoute, evmToSolanaRouteTransferRequest, solanaNtt }: InflightCheckerContext) {
-  const seqStr = `#${msgSequence}`.padEnd(7);
-  const nttManagerPayloadID = BigInt(msgSequence).toString(16).padStart(64, '0');
-  const transceiverMessagePDA = derivePda(['transceiver_message', chainToBytes('Ethereum'), Uint8Array.from(Buffer.from(nttManagerPayloadID, 'hex'))], NTT_PROGRAM_ID);
+async function checkEVMtoSolanaTransfer(sequence: number, { wh, evmToSolanaRoute, evmToSolanaRouteTransferRequest, solanaNtt }: InflightCheckerContext) {
+  const seqStr = `#${sequence}`.padEnd(7);
 
-  let transceiverMessageAccountInfo = await connection.getAccountInfo(transceiverMessagePDA);
+  const wormholeMessageId: WormholeMessageId = {
+    chain: 'Ethereum' as const,
+    emitter: new UniversalAddress(NTT_TRANSCEIVER_EVM_ADDRESS),
+    sequence: BigInt(sequence),
+  };
 
-  if (!transceiverMessageAccountInfo) {
-    console.log(`[EVM->SOL]::[${seqStr}] Message not delivered: transceiver message account not found`);
-    const wormholeMessageId: WormholeMessageId = {
-      chain: 'Ethereum' as const,
-      emitter: new UniversalAddress(NTT_TRANSCEIVER_EVM_ADDRESS),
-      // for some reason the msgSequence from Ethereum is always 2 less than the actual Wormhole sequence
-      sequence: BigInt(msgSequence) + 2n,
-    };
+  const vaa = await obtainVaa(wormholeMessageId, wh, `[EVM->SOL]::[${seqStr}]`);
 
-    const vaa = await wh.getVaa(
-      wormholeMessageId,
-      "Ntt:WormholeTransfer",
-      25 * 60 * 1000
-    );
+  if (!vaa) {
+    return;
+  }
+
+  const tokenAmount = amount.fromBaseUnits(
+    BigInt(vaa?.payload.nttManagerPayload.payload.trimmedAmount.amount.toString()!),
+    vaa?.payload.nttManagerPayload.payload.trimmedAmount.decimals!
+  );
+
+  let isExecuted = await solanaNtt.getIsExecuted(vaa!);
+
+  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
+  const statusStr = isExecuted ? 'Executed' : 'Not executed';
   
-    const isExecuted = await solanaNtt.getIsExecuted(vaa!);
-    console.log('isExecuted', isExecuted)
-  
-    const manualAttestationReceipt: NttRoute.ManualAttestationReceipt = {
-      id: wormholeMessageId,
-      attestation: vaa!,
-    }
-  
-    const tokenAmount = vaa?.payload.nttManagerPayload.payload.trimmedAmount.amount.toString()!;
+  console.log(`[EVM->SOL]::[${seqStr}] Amount: ${amountStr} | Status: ${statusStr}`);
+
+  if (!isExecuted) {
+    console.log(`[EVM->SOL]::[${seqStr}] Transfer details:`, {
+      time: new Date((vaa?.timestamp ?? 0) * 1000).toISOString(),
+      sender: (vaa?.payload.nttManagerPayload.sender.toNative(CHAIN_SOLANA).address as PublicKey).toBase58(),
+      recipient: vaa?.payload.nttManagerPayload.payload.recipientAddress.toNative(CHAIN_EVM).address,
+    })
+
+    console.log(`[EVM->SOL]::[${seqStr}] Checking and completing transfer...`);
     const validatedParams = await evmToSolanaRoute.validate(evmToSolanaRouteTransferRequest, {
-      amount: tokenAmount,
+      amount: amount.display(tokenAmount),
       options: { automatic: false },
     });
-  
     const manualTransferReceipt: NttRoute.ManualTransferReceipt = {
       from: CHAIN_EVM,
       to: CHAIN_SOLANA,
       state: TransferState.Attested,
       originTxs: [],
-      attestation: manualAttestationReceipt,
+      attestation: {
+        id: wormholeMessageId,
+        attestation: vaa!,
+      },
       params: {
-        amount: tokenAmount,
+        amount: amount.display(tokenAmount),
         options: { automatic: false },
         normalizedParams: (validatedParams.params as any).normalizedParams,
       }
     }
-    
-    console.log('Transfer not finalized')
-    console.log('check and complete transfer');
     const dstSigner = await getSigner(
       wh.getChain("Solana"),
       "privateKey",
     );
+
     await routes.checkAndCompleteTransfer(evmToSolanaRoute, manualTransferReceipt, dstSigner.signer, 1000);
 
-    console.log('wait 10 seconds')
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    console.log(`[EVM->SOL]::[${seqStr}] Waiting 60 seconds...`);
+    await new Promise(resolve => setTimeout(resolve, 60000));
 
-    transceiverMessageAccountInfo = await connection.getAccountInfo(transceiverMessagePDA);
-    if (!transceiverMessageAccountInfo) {
-      throw new Error('Message not delivered: transceiver message account not found for sequence ${msgSequence}');
+    isExecuted = await solanaNtt.getIsExecuted(vaa!);
+
+    if (isExecuted) {
+      console.log(`[EVM->SOL]::[${seqStr}] Transfer executed successfully`);
+    } else {
+      throw new Error(`[EVM->SOL]::[${seqStr}] Transfer failed to execute`);
     }
-  }
-
-  const transceiverMessageDataDecoded = ValidatedTransceiverMessageLayout.decode(transceiverMessageAccountInfo?.data);
-
-  if (transceiverMessageDataDecoded.from_chain.id !== chainToChainId('Ethereum')) {
-    console.log('Not from Ethereum')
-    return;
-  }
-
-  const tokenAmount = amount.fromBaseUnits(
-    BigInt(transceiverMessageDataDecoded.message.ntt_manager_payload.payload.amount.amount),
-    transceiverMessageDataDecoded.message.ntt_manager_payload.payload.amount.decimals
-  );
-
-  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
-
-  const wormholeMessageId: WormholeMessageId = {
-    chain: 'Ethereum' as const,
-    emitter: new UniversalAddress(NTT_TRANSCEIVER_EVM_ADDRESS),
-    // for some reason the msgSequence from Ethereum is always 2 less than the actual Wormhole sequence
-    sequence: BigInt(msgSequence) + 2n,
-  };
-
-  const vaa = await wh.getVaa(
-    wormholeMessageId,
-    "Ntt:WormholeTransfer",
-    25 * 60 * 1000
-  );
-
-  const vaaAmount = vaa?.payload.nttManagerPayload.payload.trimmedAmount.amount.toString();
-  const transceiverMessageAmount = tokenAmount.amount;
-
-  if (vaaAmount !== transceiverMessageAmount) {
-    throw new Error('Token amount mismatch')
-  }
-  const isExecuted = await solanaNtt.getIsExecuted(vaa!);
-
-  if (isExecuted) {
-    console.log(`[EVM->SOL]::[${seqStr}] Amount: ${amountStr} | Status: Executed`);
   }
 }
 
@@ -438,6 +397,23 @@ async function createContext(): Promise<InflightCheckerContext> {
     solanaToEvmRouteTransferRequest,
     wh,
   }
+}
+
+async function obtainVaa(wormholeMessageId: WormholeMessageId, wh: Wormhole<typeof ENVIRONMENT>, logPrefix: string): Promise<VAA<"Ntt:WormholeTransfer"> | null> {
+  const vaaBytes = await wh.getVaaBytes(
+    wormholeMessageId,
+    10 * 1000
+  );
+  const payload = deserializeUnknownVaa(vaaBytes!).payload;
+  if (payload[0] === 156 && payload[1] === 35 && payload[2] === 189 && payload[3] === 59) {
+    console.log(`${logPrefix} Ntt:TransceiverInfo               | Status: Skipped`);
+    return null;
+  } else if (payload[0] === 24 && payload[1] === 252 && payload[2] === 103 && payload[3] === 194) {
+    console.log(`${logPrefix} Ntt:TransceiverRegistration       | Status: Skipped`);
+    return null;
+  }
+
+  return deserialize('Ntt:WormholeTransfer', vaaBytes!);
 }
 
 main()
