@@ -197,7 +197,7 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
   let isExecuted = await evmNtt.getIsExecuted(vaa!);
 
   const seqStr = `#${sequence}`.padEnd(7);
-  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padEnd(25);
+  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
   const statusStr = isExecuted ? 'Executed' : 'Not executed';
   
   console.log(`[SOL->EVM]::[${seqStr}] Amount: ${amountStr} | Status: ${statusStr}`);
@@ -351,7 +351,7 @@ async function checkEVMtoSolanaTransfer(msgSequence: number, { wh, evmToSolanaRo
     transceiverMessageDataDecoded.message.ntt_manager_payload.payload.amount.decimals
   );
 
-  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padEnd(25);
+  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
 
   const wormholeMessageId: WormholeMessageId = {
     chain: 'Ethereum' as const,
