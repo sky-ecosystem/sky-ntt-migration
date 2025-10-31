@@ -6,7 +6,7 @@ import {
 import { UniversalAddress, amount, wormhole, WormholeMessageId, routes, TokenId, TransferState, Chain, Wormhole, deserialize, deserializeUnknownVaa, VAA, platformToAddressFormat } from "@wormhole-foundation/sdk";
 import { derivePda } from "../lib/utils.js";
 import { ethers } from "ethers";
-import { abi } from './NTTManagerABI.js'
+import { Erc20ABI, NttEvmTransceiverABI, NttManagerABI } from './abis.js'
 import { SolanaNtt } from "../sdk/ntt.js";
 import evm from "@wormhole-foundation/sdk/evm";
 import solana from "@wormhole-foundation/sdk/solana";
@@ -20,48 +20,16 @@ import "../sdk"; // solana
 import "../../../evm/ts/src/index"; // evm
 
 const WORMHOLE_PROGRAM_ID = new PublicKey('worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth');
-const WORMHOLE_CORE_BRIDGE_EVM_ADDRESS = '0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B';
 const NTT_PROGRAM_ID = new PublicKey('STTUVCMPuNbk21y1J6nqEGXSQ8HKvFmFBKnCvKHTrWn');
-const NTT_MANAGER_EVM_ADDRESS = '0x7d4958454a3f520bDA8be764d06591B054B0bf33';
-const NTT_EVM_TOKEN_ADDRESS = '0xdc035d45d973e3ec169d2276ddab16f1e407384f';
-const NTT_TRANSCEIVER_EVM_ADDRESS = "0x16D2b6c87A18cB59DD59EFa3aa50055667cf481d";
 const NTT_TRANSCEIVER_SOLANA_ADDRESS = '4ZQYCg7ZiVeNp9DxUbgc4b9JpLXoX1RXYfMXS5saXpkC'; // USDS Wormhole Transceiver
 const NTT_SOLANA_TOKEN_ADDRESS = 'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA';
 const NTT_SOLANA_QUOTER_ADDRESS = 'Nqd6XqA8LbsCuG8MLWWuP865NV6jR1MbXeKxD4HLKDJ';
-const TOKEN_SYMBOL = 'USDS';
+const NTT_MANAGER_EVM_ADDRESS = '0x7d4958454a3f520bDA8be764d06591B054B0bf33';
 const ENVIRONMENT = 'Mainnet' as const;
 const CHAIN_EVM: Chain = 'Ethereum' as const;
 const CHAIN_SOLANA: Chain = 'Solana' as const;
 const SOLANA_RPC_URL = 'https://api.mainnet-beta.solana.com';
 const ETHEREUM_RPC_URL = 'https://0xrpc.io/eth';
-
-const NttTokens: Record<string, NttRoute.TokenConfig[]> = {
-  [TOKEN_SYMBOL]: [
-    {
-      chain: CHAIN_EVM,
-      manager: NTT_MANAGER_EVM_ADDRESS,
-      token: NTT_EVM_TOKEN_ADDRESS,
-      transceiver: [
-        {
-          address: NTT_TRANSCEIVER_EVM_ADDRESS,
-          type: "wormhole",
-        },
-      ],
-    },
-    {
-      chain: CHAIN_SOLANA,
-      manager: NTT_PROGRAM_ID.toBase58(),
-      token: NTT_SOLANA_TOKEN_ADDRESS,
-      transceiver: [
-        {
-          address: NTT_TRANSCEIVER_SOLANA_ADDRESS,
-          type: "wormhole",
-        },
-      ],
-      quoter: NTT_SOLANA_QUOTER_ADDRESS,
-    },
-  ]
-}
 
 type InflightCheckerContext = {
   evmNtt: EvmNtt<typeof ENVIRONMENT, "Ethereum">,
@@ -73,17 +41,12 @@ type InflightCheckerContext = {
   wh: Wormhole<typeof ENVIRONMENT>,
 }
 
-const evmTokenId: TokenId = {
-  chain: CHAIN_EVM,
-  address: new UniversalAddress(NttTokens[TOKEN_SYMBOL]![0]!.token, platformToAddressFormat('Evm')),
-}
-const solanaTokenId: TokenId = {
-  chain: CHAIN_SOLANA,
-  address: new UniversalAddress(NttTokens[TOKEN_SYMBOL]![1]!.token, platformToAddressFormat('Solana')),
-}
-
 const connection = new Connection(SOLANA_RPC_URL, "confirmed");
 const evmProvider = new ethers.JsonRpcProvider(ETHEREUM_RPC_URL);
+
+const nttManagerEVM = new ethers.Contract(NTT_MANAGER_EVM_ADDRESS, NttManagerABI, evmProvider);
+const { nttEvmTransceiverAddress, tokenEvm, wormholeCoreBridgeEvm, tokenSymbol } = await prepareNttEVMAddresses(nttManagerEVM);
+const { NttTokens, evmTokenId, solanaTokenId } = prepareNttTokenConfigs();
 
 const emitterPDA = derivePda(['emitter'], NTT_PROGRAM_ID);
 const sequencePDA = derivePda(['Sequence', emitterPDA.toBytes()], WORMHOLE_PROGRAM_ID);
@@ -195,7 +158,7 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
 
   let isExecuted = await evmNtt.getIsExecuted(vaa!);
 
-  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
+  const amountStr = `${amount.display(tokenAmount)} ${tokenSymbol}`.padStart(25);
   const statusStr = isExecuted ? 'Executed' : 'Not executed';
   
   console.log(`[SOL->EVM]::[${seqStr}] Amount: ${amountStr} | Status: ${statusStr}`);
@@ -250,7 +213,6 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
 async function checkEVMtoSolanaPathway(context: InflightCheckerContext, { numberOfMessagesToCheck, skipFirst, skipLast, delayBetweenChecks }: { numberOfMessagesToCheck: number, skipFirst: number, skipLast: number, delayBetweenChecks: number }) {
   console.log(`[EVM->SOL]::[PATHWAY] Checking last ${numberOfMessagesToCheck} EVM to Solana transfers. Skip first: ${skipFirst}, skip last: ${skipLast}. Delay between checks: ${delayBetweenChecks}ms`);
 
-  const nttManagerEVM = new ethers.Contract(NTT_MANAGER_EVM_ADDRESS, abi, evmProvider);
   
   // msgSequence is 2 less than sequence on mainnet because first two messages are configuration messages
   const nextSequence = await (nttManagerEVM as any).nextMessageSequence() + 2n;
@@ -277,7 +239,7 @@ async function checkEVMtoSolanaTransfer(sequence: number, { wh, evmToSolanaRoute
 
   const wormholeMessageId: WormholeMessageId = {
     chain: 'Ethereum' as const,
-    emitter: new UniversalAddress(NTT_TRANSCEIVER_EVM_ADDRESS),
+    emitter: new UniversalAddress(nttEvmTransceiverAddress),
     sequence: BigInt(sequence),
   };
 
@@ -294,7 +256,7 @@ async function checkEVMtoSolanaTransfer(sequence: number, { wh, evmToSolanaRoute
 
   let isExecuted = await solanaNtt.getIsExecuted(vaa!);
 
-  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padStart(25);
+  const amountStr = `${amount.display(tokenAmount)} ${tokenSymbol}`.padStart(25);
   const statusStr = isExecuted ? 'Executed' : 'Not executed';
   
   console.log(`[EVM->SOL]::[${seqStr}] Amount: ${amountStr} | Status: ${statusStr}`);
@@ -357,10 +319,10 @@ async function createContext(): Promise<InflightCheckerContext> {
   const evmNtt = new EvmNtt(ENVIRONMENT, "Ethereum", evmProvider, {
     ntt: {
       manager: NTT_MANAGER_EVM_ADDRESS,
-      token: NTT_EVM_TOKEN_ADDRESS,
-      transceiver: { wormhole: NTT_TRANSCEIVER_EVM_ADDRESS },
+      token: tokenEvm,
+      transceiver: { wormhole: nttEvmTransceiverAddress },
     },
-    coreBridge: WORMHOLE_CORE_BRIDGE_EVM_ADDRESS,
+    coreBridge: wormholeCoreBridgeEvm,
   });
 
   const solanaNtt = new SolanaNtt(ENVIRONMENT, "Solana", connection, {
@@ -414,6 +376,64 @@ async function obtainVaa(wormholeMessageId: WormholeMessageId, wh: Wormhole<type
   }
 
   return deserialize('Ntt:WormholeTransfer', vaaBytes!);
+}
+
+async function prepareNttEVMAddresses(nttManagerEVM: ethers.Contract) {
+  const transceivers = await (nttManagerEVM as any).getTransceivers() as string[];
+  const nttEvmTransceiverAddress = transceivers[0];
+
+  if (!nttEvmTransceiverAddress) {
+    throw new Error('No EVM transceiver address found');
+  }
+
+  const nttEVMTransceiver = new ethers.Contract(nttEvmTransceiverAddress, NttEvmTransceiverABI, evmProvider);
+  const tokenEvm = await (nttEVMTransceiver as any).nttManagerToken() as string;
+  const wormholeCoreBridgeEvm = await (nttEVMTransceiver as any).wormhole() as string;
+  const erc20Token = new ethers.Contract(tokenEvm, Erc20ABI, evmProvider);
+  const tokenSymbol = await (erc20Token as any).symbol() as string;
+
+  return { nttEvmTransceiverAddress, tokenEvm, wormholeCoreBridgeEvm, tokenSymbol };
+}
+
+function prepareNttTokenConfigs() {
+  const NttTokens: Record<string, NttRoute.TokenConfig[]> = {
+    [tokenSymbol]: [
+      {
+        chain: CHAIN_EVM,
+        manager: NTT_MANAGER_EVM_ADDRESS,
+        token: tokenEvm,
+        transceiver: [
+          {
+            address: nttEvmTransceiverAddress,
+            type: "wormhole",
+          },
+        ],
+      },
+      {
+        chain: CHAIN_SOLANA,
+        manager: NTT_PROGRAM_ID.toBase58(),
+        token: NTT_SOLANA_TOKEN_ADDRESS,
+        transceiver: [
+          {
+            address: NTT_TRANSCEIVER_SOLANA_ADDRESS,
+            type: "wormhole",
+          },
+        ],
+        quoter: NTT_SOLANA_QUOTER_ADDRESS,
+      },
+    ]
+  }
+
+  const evmTokenId: TokenId = {
+    chain: CHAIN_EVM,
+    address: new UniversalAddress(NttTokens[tokenSymbol]![0]!.token, platformToAddressFormat('Evm')),
+  }
+  const solanaTokenId: TokenId = {
+    chain: CHAIN_SOLANA,
+    address: new UniversalAddress(NttTokens[tokenSymbol]![1]!.token, platformToAddressFormat('Solana')),
+  }
+  
+  return { NttTokens, evmTokenId, solanaTokenId }
 }
 
 main()
