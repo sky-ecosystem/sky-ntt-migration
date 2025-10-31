@@ -161,11 +161,13 @@ async function checkSolanaToEVMPathway(context: InflightCheckerContext, { number
   const solanaOutboundSequence: number = SequenceTrackerLayout.decode(sequenceInfo?.data).sequence.toNumber()
   const lastSentSolanaOutboundSequence = solanaOutboundSequence - 1;
 
-  console.log(`[SOL->EVM]::[PATHWAY] Last sent Solana to EVM sequence: #${lastSentSolanaOutboundSequence}`);
+  console.log(`[SOL->EVM]::[PATHWAY] Last sent Solana to EVM sequence: #${lastSentSolanaOutboundSequence} (0-indexed). Total messages: ${lastSentSolanaOutboundSequence + 1}`);
 
+ // message sequences start at 0, so we take the skipFirst - 1 to get the index of the first message to skip
+ const firstIndexToSkip = skipFirst - 1;
   for (let i = 0; i < numberOfMessagesToCheck; i++) {
     const sequenceToCheck = lastSentSolanaOutboundSequence - i - skipLast;
-    if (sequenceToCheck === skipFirst) {
+    if (sequenceToCheck === firstIndexToSkip || sequenceToCheck < 0) {
       break;
     }
     await checkSolanaToEVMTransfer(sequenceToCheck, context);
@@ -174,10 +176,6 @@ async function checkSolanaToEVMPathway(context: InflightCheckerContext, { number
 
 async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, solanaToEvmRouteTransferRequest, evmNtt, wh }: InflightCheckerContext) {
   const seqStr = `#${sequence}`.padEnd(7);
-
-  if (sequence < 1) {
-    throw new Error(`[SOL->EVM]::[${seqStr}] Sequence is less than 1`);
-  }
 
   const wormholeMessageId: WormholeMessageId = {
     chain: 'Solana' as const,
@@ -191,9 +189,12 @@ async function checkSolanaToEVMTransfer(sequence: number, { solanaToEvmRoute, so
   );
   const payload = deserializeUnknownVaa(vaaBytes!).payload;
   if (payload[0] === 156 && payload[1] === 35 && payload[2] === 189 && payload[3] === 59) {
-    console.log(`[SOL->EVM]::[${seqStr}] Ntt:TransceiverInfo protocol      | Status: Skipped`);
+    console.log(`[SOL->EVM]::[${seqStr}] Ntt:TransceiverInfo               | Status: Skipped`);
     return;
-  } 
+  } else if (payload[0] === 24 && payload[1] === 252 && payload[2] === 103 && payload[3] === 194) {
+    console.log(`[SOL->EVM]::[${seqStr}] Ntt:TransceiverRegistration       | Status: Skipped`);
+    return;
+  }
 
   const vaa = deserialize('Ntt:WormholeTransfer', vaaBytes!);
 
