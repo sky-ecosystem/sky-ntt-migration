@@ -91,6 +91,15 @@ const sequencePDA = derivePda(['Sequence', emitterPDA.toBytes()], WORMHOLE_PROGR
 async function main() {
   const context = await createContext();
 
+  // wait 10 seconds after the check so the public RPC can sustain the load
+  await checkSolanaInbox(context, { delayAfterChecking: 10000 });
+
+  console.log('--------------------------------');
+
+  await checkSolanaOutbox(context);
+
+  console.log('--------------------------------');
+
   await checkSolanaToEVMPathway(context, {
     numberOfMessagesToCheck: 10,
     skipFirst: 1, // on mainnet skipping first message because it doesn't match the correct expected layout
@@ -105,6 +114,45 @@ async function main() {
     skipLast: 0,
     delayBetweenChecks: 500,
   });
+}
+
+async function checkSolanaInbox({ solanaNtt }: InflightCheckerContext, { delayAfterChecking }: { delayAfterChecking: number }) {
+  console.log('[EVM->SOL]::[INBOX  ] Checking...');
+  const inboxItems = await solanaNtt.program.account.inboxItem.all();
+  const releasedItems = inboxItems.filter(item => item.account.releaseStatus.released);
+  const unreleasedItemsLength = inboxItems.length - releasedItems.length;
+  console.log(`[EVM->SOL]::[INBOX  ] Released items: ${releasedItems.length}`);
+  console.log(`[EVM->SOL]::[INBOX  ] Unreleased items: ${unreleasedItemsLength}`);
+
+  if (delayAfterChecking) {
+    console.log(`[EVM->SOL]::[INBOX  ] Waiting ${delayAfterChecking}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delayAfterChecking));
+  }
+}
+
+async function checkSolanaOutbox({ solanaNtt }: InflightCheckerContext) {
+  console.log('[SOL->EVM]::[OUTBOX ] Checking...');
+  const releasedItems = await solanaNtt.program.account.outboxItem.all([
+    {
+      memcmp: {
+        offset: 123, // 8-byte discriminator + 115 bytes to reach 'released' field
+        bytes: Buffer.from('01000000000000000000000000000000', 'hex').toString('base64'), // bitmap with first bit set to 1
+        encoding: 'base64' as const,
+      }
+    }
+  ]);
+  const unreleasedItems = await solanaNtt.program.account.outboxItem.all([
+    {
+      memcmp: {
+        offset: 123, // 8-byte discriminator + 115 bytes to reach 'released' field
+        bytes: Buffer.from('00000000000000000000000000000000', 'hex').toString('base64'), // empty bitmap
+        encoding: 'base64' as const,
+      }
+    }
+  ]);
+
+  console.log(`[SOL->EVM]::[OUTBOX ] Released items: ${releasedItems.length}`);
+  console.log(`[SOL->EVM]::[OUTBOX ] Unreleased items: ${unreleasedItems.length}`);
 }
 
 async function checkSolanaToEVMPathway(context: InflightCheckerContext, { numberOfMessagesToCheck, skipFirst, skipLast }: { numberOfMessagesToCheck: number, skipFirst: number, skipLast: number }) {
@@ -209,11 +257,13 @@ async function checkEVMtoSolanaPathway(context: InflightCheckerContext, { number
   const nextMessageSequence = await (nttManagerEVM as any).nextMessageSequence();
   const lastSentMessageSequenceEVM = nextMessageSequence - 1n;
 
-  console.log(`[EVM->SOL]::[PATHWAY] Last sent EVM to Solana sequence: #${lastSentMessageSequenceEVM}`);
+  console.log(`[EVM->SOL]::[PATHWAY] Last sent EVM to Solana sequence: #${lastSentMessageSequenceEVM} (0-indexed). Total messages: ${lastSentMessageSequenceEVM + BigInt(1)}`);
 
+  // message sequences start at 0, so we take the skipFirst - 1 to get the index of the first message to skip
+  const firstIndexToSkip = skipFirst - 1;
   for (let i = 0; i < numberOfMessagesToCheck; i++) {
     const sequenceToCheck = Number(lastSentMessageSequenceEVM) - i - skipLast;
-    if (sequenceToCheck === skipFirst) {
+    if (sequenceToCheck === firstIndexToSkip || sequenceToCheck < 0) {
       break;
     }
     await checkEVMtoSolanaTransfer(sequenceToCheck, context);
@@ -224,14 +274,14 @@ async function checkEVMtoSolanaPathway(context: InflightCheckerContext, { number
 }
 
 async function checkEVMtoSolanaTransfer(msgSequence: number, { wh, evmToSolanaRoute, evmToSolanaRouteTransferRequest, solanaNtt }: InflightCheckerContext) {
-  console.log(`Checking EVM to Solana incoming message sequence ${msgSequence}...`)
+  const seqStr = `#${msgSequence}`.padEnd(7);
   const nttManagerPayloadID = BigInt(msgSequence).toString(16).padStart(64, '0');
   const transceiverMessagePDA = derivePda(['transceiver_message', chainToBytes('Ethereum'), Uint8Array.from(Buffer.from(nttManagerPayloadID, 'hex'))], NTT_PROGRAM_ID);
 
   let transceiverMessageAccountInfo = await connection.getAccountInfo(transceiverMessagePDA);
 
   if (!transceiverMessageAccountInfo) {
-    console.log(`Message not delivered: transceiver message account not found for sequence ${msgSequence}`);
+    console.log(`[EVM->SOL]::[${seqStr}] Message not delivered: transceiver message account not found`);
     const wormholeMessageId: WormholeMessageId = {
       chain: 'Ethereum' as const,
       emitter: new UniversalAddress(NTT_TRANSCEIVER_EVM_ADDRESS),
@@ -301,7 +351,7 @@ async function checkEVMtoSolanaTransfer(msgSequence: number, { wh, evmToSolanaRo
     transceiverMessageDataDecoded.message.ntt_manager_payload.payload.amount.decimals
   );
 
-  console.log(`Found transfer of ${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`);
+  const amountStr = `${amount.display(tokenAmount)} ${TOKEN_SYMBOL}`.padEnd(25);
 
   const wormholeMessageId: WormholeMessageId = {
     chain: 'Ethereum' as const,
@@ -325,8 +375,7 @@ async function checkEVMtoSolanaTransfer(msgSequence: number, { wh, evmToSolanaRo
   const isExecuted = await solanaNtt.getIsExecuted(vaa!);
 
   if (isExecuted) {
-    console.debug('Transfer already executed');
-    return;
+    console.log(`[EVM->SOL]::[${seqStr}] Amount: ${amountStr} | Status: Executed`);
   }
 }
 
