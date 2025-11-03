@@ -40,10 +40,18 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         require(nttManager.rateLimitDuration() == params.rateLimitDuration);
         console2.log("Deployment params match:  true");
 
-        bytes memory testTransferData = abi.encodeWithSignature("transfer(uint256,uint16,bytes32)", 1000000000000000000, 2, bytes32(uint256(123)));
+        bytes memory testTransferData = abi.encodeWithSignature(
+            "transfer(uint256,uint16,bytes32)", 1000000000000000000, 2, bytes32(uint256(123))
+        );
         (bool success, bytes memory returnData) = address(nttManager).call(testTransferData);
         // before upgrade transfer() should be callable, but can revert with domain logic error
-        require(!success && keccak256(returnData) == keccak256(abi.encodeWithSignature("Error(string)", "Usds/insufficient-balance")));
+        require(
+            !success
+                && keccak256(returnData)
+                    == keccak256(
+                        abi.encodeWithSignature("Error(string)", "Usds/insufficient-balance")
+                    )
+        );
         console2.log("Method transfer() exists: true");
 
         vm.startPrank(nttManager.owner());
