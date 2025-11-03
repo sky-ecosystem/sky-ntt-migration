@@ -9,7 +9,7 @@ import "../src/interfaces/IManagerBase.sol";
 import {NttManager} from "../src/NttManager/NttManager.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PausableUpgradeable} from "../src/libraries/PausableUpgradeable.sol";
-
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ParseNttConfig} from "./helpers/ParseNttConfig.sol";
 
 contract SimulateNttManagerUpgradeScript is ParseNttConfig {
@@ -67,5 +67,16 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         // now the transfer() reverts with empty revert reason, because we removed transfer() from the implementation
         require(!success && returnData.length == 0);
         console2.log("Method transfer() exists: false");
+
+        console2.log("\n=== migrate locked tokens ===");
+        address OFTAdapter = 0x1e1D42781FC170EF9da004Fb735f56F0276d01B8;
+        uint256 balance = IERC20(nttManager.token()).balanceOf(address(nttManager));
+        console2.log("Balance of NttManager: ", balance);
+        vm.prank(nttManager.owner());
+        nttManager.migrateLockedTokens(OFTAdapter);
+        console2.log("Balance of NttManager after migrate: ", IERC20(nttManager.token()).balanceOf(address(nttManager)));
+        console2.log("Balance of OFTAdapter after migrate: ", IERC20(nttManager.token()).balanceOf(OFTAdapter));
+        require(IERC20(nttManager.token()).balanceOf(address(nttManager)) == 0);
+        require(IERC20(nttManager.token()).balanceOf(OFTAdapter) == balance);
     }
 }
