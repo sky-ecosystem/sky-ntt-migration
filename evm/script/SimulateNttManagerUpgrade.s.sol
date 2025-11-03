@@ -48,9 +48,7 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         require(
             !success
                 && keccak256(returnData)
-                    == keccak256(
-                        abi.encodeWithSignature("Error(string)", "Usds/insufficient-balance")
-                    )
+                    == keccak256(abi.encodeWithSignature("Error(string)", "Usds/insufficient-balance"))
         );
         console2.log("Method transfer() exists: true");
 
