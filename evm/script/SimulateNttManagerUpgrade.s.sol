@@ -74,8 +74,14 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         console2.log("Balance of NttManager: ", balance);
         vm.prank(nttManager.owner());
         nttManager.migrateLockedTokens(OFTAdapter);
-        console2.log("Balance of NttManager after migrate: ", IERC20(nttManager.token()).balanceOf(address(nttManager)));
-        console2.log("Balance of OFTAdapter after migrate: ", IERC20(nttManager.token()).balanceOf(OFTAdapter));
+        console2.log(
+            "Balance of NttManager after migrate: ",
+            IERC20(nttManager.token()).balanceOf(address(nttManager))
+        );
+        console2.log(
+            "Balance of OFTAdapter after migrate: ",
+            IERC20(nttManager.token()).balanceOf(OFTAdapter)
+        );
         require(IERC20(nttManager.token()).balanceOf(address(nttManager)) == 0);
         require(IERC20(nttManager.token()).balanceOf(OFTAdapter) == balance);
     }
