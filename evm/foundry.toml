@@ -12,6 +12,9 @@ fs_permissions = [{ access = "read", path = "./test/payloads"}]
 [profile.prod]
 via_ir = true
 fs_permissions = [{access = "read", path = "./cfg/"}]
+libraries = [
+    "src/libraries/TransceiverStructs.sol:TransceiverStructs:0xf0396a8077eda579f657B5E6F3c3F5e8EE81972b"
+]
 
 [fmt]
 line_length = 100

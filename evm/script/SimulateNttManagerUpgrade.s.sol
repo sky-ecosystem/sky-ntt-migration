@@ -53,7 +53,7 @@ contract SimulateNttManagerUpgradeScript is ParseNttConfig {
         console2.log("Method transfer() exists: true");
 
         vm.startPrank(nttManager.owner());
-        address implementation = 0x7A36d02066f7EaFab5a7738403c98E1AC09DD2AD;
+        address implementation = 0xD4DD90bAC23E2a1470681E7cAfFD381FE44c3430;
         nttManager.upgrade(address(implementation));
         vm.stopPrank();
 
