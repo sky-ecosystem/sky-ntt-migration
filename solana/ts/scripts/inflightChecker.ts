@@ -264,10 +264,9 @@ async function checkEVMtoSolanaTransfer(sequence: number, { wh, evmToSolanaRoute
   if (!isExecuted) {
     console.log(`[EVM->SOL]::[${seqStr}] Transfer details:`, {
       time: new Date((vaa?.timestamp ?? 0) * 1000).toISOString(),
-      sender: (vaa?.payload.nttManagerPayload.sender.toNative(CHAIN_SOLANA).address as PublicKey).toBase58(),
-      recipient: vaa?.payload.nttManagerPayload.payload.recipientAddress.toNative(CHAIN_EVM).address,
-    })
-
+      sender: vaa?.payload.nttManagerPayload.sender.toNative(CHAIN_EVM).address,
+      recipient: vaa?.payload.nttManagerPayload.payload.recipientAddress.toNative(CHAIN_SOLANA).address.toString()
+    });
     console.log(`[EVM->SOL]::[${seqStr}] Checking and completing transfer...`);
     const validatedParams = await evmToSolanaRoute.validate(evmToSolanaRouteTransferRequest, {
       amount: amount.display(tokenAmount),
