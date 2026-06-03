@@ -24,7 +24,7 @@ There are two basic components to NTT:
 ## Amount trimming
 
 In the payload, amounts are encoded as unsigned 64 bit integers, and capped at the configured `TRIMMED_DECIMALS` (e.g. 8) decimal value.
-This means that if on the sending chain, the token has more than than `TRIMMED_DECIMALS`, then the amount is trimmed.
+This means that if on the sending chain, the token has more than `TRIMMED_DECIMALS`, then the amount is trimmed.
 The amount that's removed during trimming is referred to as "dust". The contracts ensure to never destroy dust.
 The NTT manager contracts additionally keep track of the token decimals of the other connected chains. When sending to a chain whose token decimals are less than `TRIMMED_DECIMALS`, the amount is instead trimmed to those decimals to ensure that the recipient contract can handle the amount without destroying dust.
 
