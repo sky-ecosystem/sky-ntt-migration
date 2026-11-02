@@ -53,3 +53,16 @@ The action identifier specifies the runtime. Currently, these are as follows:
 ---
 
 ⚠️ **WARNING:** Ensure that if the `NttManager` on the source chain is configured to be in `LOCKING` mode, the corresponding `NttManager`s on the target chains are configured to be in `BURNING` mode. If not, transfers will NOT go through and user funds may be lost! Proceed with caution!
+
+## Audits
+
+Audit reports are hosted on the auditors' public portfolio pages:
+
+| Auditor | Report | Date |
+| --- | --- | --- |
+| Cantina | [Sky: Solana Bridge Migration](https://cantina.xyz/portfolio/7e9cf72b-0b80-4a65-9db9-f1f06634bd81) | 2025-11-11 |
+| ChainSecurity | [Sky Wormhole NTT Migration Update](https://www.chainsecurity.com/security-audit/sky-wormhole-ntt-migration-update/) | 2025-10-20 |
+| Cantina | [Sky: Migration NTT Manager EVM](https://cantina.xyz/portfolio/281a79ea-0a83-4cdf-93db-83e0de4d7689) | 2025-10-17 |
+| Cantina | [Sky: Migration NTT Manager Solana](https://cantina.xyz/portfolio/e976f54a-e1f1-4494-8907-6d5a4cdbb516) | 2025-10-17 |
+
+ChainSecurity reports are cumulative: each portfolio page hosts the latest version of the report, which covers all previously reviewed versions.
